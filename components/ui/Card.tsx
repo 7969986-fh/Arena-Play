@@ -1,9 +1,9 @@
 import React from 'react';
-import { StyleSheet, View, ViewProps, ViewStyle } from 'react-native';
+import { StyleProp, StyleSheet, View, ViewProps, ViewStyle } from 'react-native';
 import { colors, radius, shadow } from '@/constants/theme';
 
 interface Props extends ViewProps {
-  style?: ViewStyle | ViewStyle[];
+  style?: StyleProp<ViewStyle>;
   elevation?: 'sm' | 'md' | 'lg';
   padded?: boolean;
 }

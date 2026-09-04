@@ -70,6 +70,18 @@ export function useNotifications() {
   return items;
 }
 
+export function useAllContests() {
+  const [contests, setContests] = useState<Contest[]>([]);
+  useEffect(() => backend.watchAllContests(setContests), []);
+  return contests;
+}
+
+export function useUsers() {
+  const [users, setUsers] = useState<AppUser[]>([]);
+  useEffect(() => backend.watchUsers(setUsers), []);
+  return users;
+}
+
 export function useDeposits() {
   const [items, setItems] = useState<MoneyRequest[]>([]);
   useEffect(() => backend.watchDeposits(setItems), []);

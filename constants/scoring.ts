@@ -10,3 +10,16 @@ export function placementPoints(placement: number): number {
 export function matchPoints(kills: number, placement: number): number {
   return kills + placementPoints(placement);
 }
+
+import { PrizeRow } from '@/models/types';
+
+/** Coins won for a result = placement prize (from breakdown) + per-kill reward. */
+export function computeWinnings(
+  placement: number,
+  kills: number,
+  perKill: number,
+  prizeBreakdown: PrizeRow[],
+): number {
+  const placePrize = prizeBreakdown.find((p) => p.rank === placement)?.amount ?? 0;
+  return placePrize + kills * (perKill || 0);
+}

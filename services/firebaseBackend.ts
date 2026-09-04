@@ -7,6 +7,7 @@ import {
 import {
   addDoc,
   collection,
+  deleteDoc,
   doc,
   getDoc,
   increment,
@@ -15,7 +16,6 @@ import {
   orderBy,
   query,
   runTransaction,
-  serverTimestamp,
   setDoc,
   where,
 } from 'firebase/firestore';
@@ -24,8 +24,9 @@ import {
   AppNotification, AppUser, Contest, Game, MoneyRequest, Registration, Transaction,
 } from '@/models/types';
 import { SEED_GAMES } from '@/constants/games';
+import { computeWinnings } from '@/constants/scoring';
 import { buildSampleContests } from '@/services/sampleData';
-import { Backend, JoinInput, Unsub } from '@/services/backendTypes';
+import { Backend, ContestInput, JoinInput, ResultRow, Unsub } from '@/services/backendTypes';
 
 const now = () => Date.now();
 
@@ -186,6 +187,138 @@ class FirebaseBackend implements Backend {
     return onSnapshot(
       query(collection(db, 'withdrawals'), orderBy('createdAt', 'desc')),
       (s) => cb(docsTo<MoneyRequest>(s)));
+  }
+
+  // ---- admin: money requests ----
+  async approveDeposit(req: MoneyRequest) {
+    const userRef = doc(db, 'users', req.userId);
+    await runTransaction(db, async (tx) => {
+      const uSnap = await tx.get(userRef);
+      if (!uSnap.exists()) throw new Error('User not found.');
+      const u = uSnap.data() as AppUser;
+      const balAfter = u.wallet.deposit + req.amount + u.wallet.winnings + u.wallet.bonus;
+      tx.update(userRef, { 'wallet.deposit': increment(req.amount) });
+      tx.update(doc(db, 'deposits', req.id), { status: 'approved' });
+      tx.set(doc(collection(db, 'transactions')), {
+        userId: req.userId, type: 'credit', amount: req.amount, walletType: 'deposit',
+        description: 'Deposit approved', balanceAfter: balAfter, createdAt: now(),
+      } as Omit<Transaction, 'id'>);
+    });
+  }
+
+  async rejectDeposit(req: MoneyRequest) {
+    await setDoc(doc(db, 'deposits', req.id), { status: 'rejected' }, { merge: true });
+  }
+
+  async approveWithdrawal(req: MoneyRequest) {
+    await setDoc(doc(db, 'withdrawals', req.id), { status: 'approved' }, { merge: true });
+  }
+
+  async rejectWithdrawal(req: MoneyRequest) {
+    const userRef = doc(db, 'users', req.userId);
+    await runTransaction(db, async (tx) => {
+      const uSnap = await tx.get(userRef);
+      if (uSnap.exists()) {
+        const u = uSnap.data() as AppUser;
+        const balAfter = u.wallet.deposit + u.wallet.winnings + req.amount + u.wallet.bonus;
+        tx.update(userRef, { 'wallet.winnings': increment(req.amount) });
+        tx.set(doc(collection(db, 'transactions')), {
+          userId: req.userId, type: 'credit', amount: req.amount, walletType: 'winnings',
+          description: 'Withdrawal rejected — refund', balanceAfter: balAfter, createdAt: now(),
+        } as Omit<Transaction, 'id'>);
+      }
+      tx.update(doc(db, 'withdrawals', req.id), { status: 'rejected' });
+    });
+  }
+
+  // ---- admin: catalog ----
+  watchAllContests(cb: (c: Contest[]) => void): Unsub {
+    return onSnapshot(query(collection(db, 'contests'), orderBy('createdAt', 'desc')), (s) =>
+      cb(docsTo<Contest>(s)));
+  }
+
+  async createContest(input: ContestInput) {
+    await addDoc(collection(db, 'contests'), {
+      ...input, filledSlots: 0, status: 'upcoming', roomId: '', roomPassword: '', createdAt: now(),
+    } as Omit<Contest, 'id'>);
+  }
+
+  async updateContest(id: string, patch: Partial<Contest>) {
+    await setDoc(doc(db, 'contests', id), patch, { merge: true });
+  }
+
+  async deleteContest(id: string) {
+    await deleteDoc(doc(db, 'contests', id));
+  }
+
+  // ---- admin: users ----
+  watchUsers(cb: (u: AppUser[]) => void): Unsub {
+    return onSnapshot(query(collection(db, 'users'), orderBy('createdAt', 'desc')), (s) =>
+      cb(docsTo<AppUser>(s)));
+  }
+
+  async setUserRole(uid: string, role: AppUser['role']) {
+    await setDoc(doc(db, 'users', uid), { role }, { merge: true });
+  }
+
+  async setUserBanned(uid: string, banned: boolean) {
+    await setDoc(doc(db, 'users', uid), { banned }, { merge: true });
+  }
+
+  // ---- admin: notifications ----
+  async sendNotification(title: string, body: string) {
+    await addDoc(collection(db, 'notifications'), { title, body, createdAt: now() } as Omit<AppNotification, 'id'>);
+  }
+
+  // ---- staff/admin: match management ----
+  async setRoomCredentials(contestId: string, roomId: string, roomPassword: string, status?: Contest['status']) {
+    await setDoc(doc(db, 'contests', contestId),
+      { roomId, roomPassword, ...(status ? { status } : {}) }, { merge: true });
+  }
+
+  async declareResults(contestId: string, results: ResultRow[]) {
+    const cSnap = await getDoc(doc(db, 'contests', contestId));
+    if (!cSnap.exists()) throw new Error('Contest not found.');
+    const contest = cSnap.data() as Contest;
+
+    for (const r of results) {
+      const regRef = doc(db, 'registrations', r.registrationId);
+      const regSnap = await getDoc(regRef);
+      if (!regSnap.exists()) continue;
+      const reg = regSnap.data() as Registration;
+      const won = computeWinnings(r.placement, r.kills, contest.perKill, contest.prizeBreakdown);
+
+      await runTransaction(db, async (tx) => {
+        tx.update(regRef, { kills: r.kills, placement: r.placement, wonAmount: won });
+        const userRef = doc(db, 'users', reg.userId);
+        const uSnap = await tx.get(userRef);
+        if (uSnap.exists()) {
+          const u = uSnap.data() as AppUser;
+          tx.update(userRef, { 'stats.kills': increment(r.kills) });
+          if (won > 0) {
+            const balAfter = u.wallet.deposit + u.wallet.winnings + won + u.wallet.bonus;
+            tx.update(userRef, { 'wallet.winnings': increment(won), 'stats.earnings': increment(won) });
+            tx.set(doc(collection(db, 'transactions')), {
+              userId: reg.userId, type: 'credit', amount: won, walletType: 'winnings',
+              description: `Won ${contest.title}`, balanceAfter: balAfter, createdAt: now(),
+            } as Omit<Transaction, 'id'>);
+          }
+        }
+      });
+    }
+    await setDoc(doc(db, 'contests', contestId), { status: 'resulted' }, { merge: true });
+  }
+
+  async removeRegistration(reg: Registration) {
+    await deleteDoc(doc(db, 'registrations', reg.id));
+    await setDoc(doc(db, 'contests', reg.contestId), { filledSlots: increment(-1) }, { merge: true });
+    if (reg.paidAmount > 0) {
+      await setDoc(doc(db, 'users', reg.userId), { 'wallet.deposit': increment(reg.paidAmount) } as any, { merge: true });
+      await addDoc(collection(db, 'transactions'), {
+        userId: reg.userId, type: 'credit', amount: reg.paidAmount, walletType: 'deposit',
+        description: 'Registration removed — refund', balanceAfter: 0, createdAt: now(),
+      } as Omit<Transaction, 'id'>);
+    }
   }
 
   async seed() {

@@ -9,8 +9,9 @@ import {
   Transaction,
 } from '@/models/types';
 import { SEED_GAMES } from '@/constants/games';
+import { computeWinnings } from '@/constants/scoring';
 import { buildSampleContests } from '@/services/sampleData';
-import { Backend, JoinInput, Unsub } from '@/services/backendTypes';
+import { Backend, ContestInput, JoinInput, ResultRow, Unsub } from '@/services/backendTypes';
 
 /**
  * Local, offline backend backed by AsyncStorage.
@@ -34,6 +35,7 @@ type Coll =
 
 const now = () => Date.now();
 const uid = () => now().toString(36) + Math.random().toString(36).slice(2, 8);
+const WELCOME_BONUS = 25;
 
 type Listener = () => void;
 
@@ -111,15 +113,19 @@ class LocalBackend implements Backend {
       username: username.trim(),
       email: key,
       role: 'player',
-      wallet: { deposit: 0, winnings: 0, bonus: 0 },
+      wallet: { deposit: 0, winnings: 0, bonus: WELCOME_BONUS },
       stats: { matchesPlayed: 0, kills: 0, earnings: 0 },
       referralCode: username.trim().toLowerCase().replace(/\s+/g, '') || id.slice(0, 6),
       referredBy: referredBy || null,
+      banned: false,
       createdAt: now(),
     };
     this.get<AppUser[]>('users').push(user);
     await this.persist('creds');
     await this.persist('users');
+    if (WELCOME_BONUS > 0) {
+      await this.addTransaction(id, 'credit', WELCOME_BONUS, 'bonus', 'Welcome bonus', WELCOME_BONUS);
+    }
     this.cache['session'] = { uid: id };
     await this.persist('session');
   }
@@ -280,15 +286,6 @@ class LocalBackend implements Backend {
       status: 'pending', createdAt: now(),
     });
     await this.persist('deposits');
-    // Demo convenience: auto-approve local deposits so the wallet is usable.
-    const u = this.get<AppUser[]>('users').find((x) => x.uid === user.uid)!;
-    u.wallet.deposit += amount;
-    await this.saveUser(u);
-    await this.addTransaction(u.uid, 'credit', amount, 'deposit',
-      'Wallet recharge', u.wallet.deposit + u.wallet.winnings + u.wallet.bonus);
-    const deps = this.get<MoneyRequest[]>('deposits');
-    deps[deps.length - 1].status = 'approved';
-    await this.persist('deposits');
   }
 
   async createWithdrawal(user: AppUser, amount: number) {
@@ -329,8 +326,181 @@ class LocalBackend implements Backend {
       [...this.get<MoneyRequest[]>('withdrawals')].sort((a, b) => b.createdAt - a.createdAt), cb);
   }
 
+  // ---- admin: money requests ----
+  private async setRequestStatus(coll: 'deposits' | 'withdrawals', id: string, status: 'approved' | 'rejected') {
+    const list = this.get<MoneyRequest[]>(coll);
+    const r = list.find((x) => x.id === id);
+    if (r) { r.status = status; await this.persist(coll); }
+  }
+
+  async approveDeposit(req: MoneyRequest) {
+    await this.ready;
+    const u = this.get<AppUser[]>('users').find((x) => x.uid === req.userId);
+    if (!u) throw new Error('User not found.');
+    u.wallet.deposit += req.amount;
+    await this.saveUser(u);
+    await this.addTransaction(u.uid, 'credit', req.amount, 'deposit',
+      'Deposit approved', u.wallet.deposit + u.wallet.winnings + u.wallet.bonus);
+    await this.setRequestStatus('deposits', req.id, 'approved');
+  }
+
+  async rejectDeposit(req: MoneyRequest) {
+    await this.ready;
+    await this.setRequestStatus('deposits', req.id, 'rejected');
+  }
+
+  async approveWithdrawal(req: MoneyRequest) {
+    await this.ready;
+    // Winnings were already held (debited) at request time; approval just marks done.
+    await this.setRequestStatus('withdrawals', req.id, 'approved');
+  }
+
+  async rejectWithdrawal(req: MoneyRequest) {
+    await this.ready;
+    // Refund the held winnings back to the user.
+    const u = this.get<AppUser[]>('users').find((x) => x.uid === req.userId);
+    if (u) {
+      u.wallet.winnings += req.amount;
+      await this.saveUser(u);
+      await this.addTransaction(u.uid, 'credit', req.amount, 'winnings',
+        'Withdrawal rejected — refund', u.wallet.deposit + u.wallet.winnings + u.wallet.bonus);
+    }
+    await this.setRequestStatus('withdrawals', req.id, 'rejected');
+  }
+
+  // ---- admin: catalog ----
+  watchAllContests(cb: (c: Contest[]) => void): Unsub {
+    return this.subscribe('contests', () =>
+      [...this.get<Contest[]>('contests')].sort((a, b) => b.createdAt - a.createdAt), cb);
+  }
+
+  async createContest(input: ContestInput) {
+    await this.ready;
+    this.get<Contest[]>('contests').push({
+      id: uid(),
+      ...input,
+      filledSlots: 0,
+      status: 'upcoming',
+      roomId: '',
+      roomPassword: '',
+      createdAt: now(),
+    });
+    await this.persist('contests');
+  }
+
+  async updateContest(id: string, patch: Partial<Contest>) {
+    await this.ready;
+    const list = this.get<Contest[]>('contests');
+    const i = list.findIndex((c) => c.id === id);
+    if (i >= 0) { list[i] = { ...list[i], ...patch }; await this.persist('contests'); }
+  }
+
+  async deleteContest(id: string) {
+    await this.ready;
+    this.cache['contests'] = this.get<Contest[]>('contests').filter((c) => c.id !== id);
+    await this.persist('contests');
+  }
+
+  // ---- admin: users ----
+  watchUsers(cb: (u: AppUser[]) => void): Unsub {
+    return this.subscribe('users', () =>
+      [...this.get<AppUser[]>('users')].sort((a, b) => b.createdAt - a.createdAt), cb);
+  }
+
+  async setUserRole(uid: string, role: AppUser['role']) {
+    await this.ready;
+    const u = this.get<AppUser[]>('users').find((x) => x.uid === uid);
+    if (u) { u.role = role; await this.saveUser(u); }
+  }
+
+  async setUserBanned(uid: string, banned: boolean) {
+    await this.ready;
+    const u = this.get<AppUser[]>('users').find((x) => x.uid === uid);
+    if (u) { u.banned = banned; await this.saveUser(u); }
+  }
+
+  // ---- admin: notifications ----
+  async sendNotification(title: string, body: string) {
+    await this.ready;
+    this.get<AppNotification[]>('notifications').push({ id: uid(), title, body, createdAt: now() });
+    await this.persist('notifications');
+  }
+
+  // ---- staff/admin: match management ----
+  async setRoomCredentials(contestId: string, roomId: string, roomPassword: string, status?: Contest['status']) {
+    await this.updateContest(contestId, { roomId, roomPassword, ...(status ? { status } : {}) });
+  }
+
+  async declareResults(contestId: string, results: ResultRow[]) {
+    await this.ready;
+    const contest = this.get<Contest[]>('contests').find((c) => c.id === contestId);
+    if (!contest) throw new Error('Contest not found.');
+    const regs = this.get<Registration[]>('registrations');
+
+    for (const r of results) {
+      const reg = regs.find((x) => x.id === r.registrationId);
+      if (!reg) continue;
+      const won = computeWinnings(r.placement, r.kills, contest.perKill, contest.prizeBreakdown);
+      reg.kills = r.kills;
+      reg.placement = r.placement;
+      reg.wonAmount = won;
+
+      const u = this.get<AppUser[]>('users').find((x) => x.uid === reg.userId);
+      if (u) {
+        u.stats.kills += r.kills;
+        if (won > 0) {
+          u.wallet.winnings += won;
+          u.stats.earnings += won;
+          await this.addTransaction(u.uid, 'credit', won, 'winnings',
+            `Won ${contest.title}`, u.wallet.deposit + u.wallet.winnings + u.wallet.bonus);
+        }
+        await this.saveUser(u);
+      }
+    }
+    await this.persist('registrations');
+    contest.status = 'resulted';
+    await this.persist('contests');
+  }
+
+  async removeRegistration(reg: Registration) {
+    await this.ready;
+    this.cache['registrations'] = this.get<Registration[]>('registrations').filter((r) => r.id !== reg.id);
+    await this.persist('registrations');
+    // Refund entry fee to deposit wallet and free the slot.
+    const contest = this.get<Contest[]>('contests').find((c) => c.id === reg.contestId);
+    if (contest && contest.filledSlots > 0) { contest.filledSlots -= 1; await this.persist('contests'); }
+    if (reg.paidAmount > 0) {
+      const u = this.get<AppUser[]>('users').find((x) => x.uid === reg.userId);
+      if (u) {
+        u.wallet.deposit += reg.paidAmount;
+        await this.saveUser(u);
+        await this.addTransaction(u.uid, 'credit', reg.paidAmount, 'deposit',
+          'Registration removed — refund', u.wallet.deposit + u.wallet.winnings + u.wallet.bonus);
+      }
+    }
+  }
+
   // ---- seed ----
+  private async seedStaffAccount(email: string, username: string, role: AppUser['role']) {
+    const creds = this.get<Record<string, any>>('creds');
+    const key = email.toLowerCase();
+    if (creds[key]) return;
+    const id = uid();
+    creds[key] = { uid: id, password: 'admin123' };
+    this.get<AppUser[]>('users').push({
+      uid: id, username, email: key, role,
+      wallet: { deposit: 0, winnings: 0, bonus: 0 },
+      stats: { matchesPlayed: 0, kills: 0, earnings: 0 },
+      referralCode: username.toLowerCase(), referredBy: null, banned: false, createdAt: now(),
+    });
+    await this.persist('creds');
+    await this.persist('users');
+  }
+
   async seed() {
+    // Demo admin & staff logins (offline mode). Password: admin123
+    await this.seedStaffAccount('admin@arena.test', 'Admin', 'admin');
+    await this.seedStaffAccount('staff@arena.test', 'Staff', 'staff');
     if (this.get<Game[]>('games').length === 0) {
       this.cache['games'] = SEED_GAMES.map((g) => ({ ...g }));
       await this.persist('games');

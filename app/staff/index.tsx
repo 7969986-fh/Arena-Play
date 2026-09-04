@@ -1,13 +1,31 @@
-import React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import Header from '@/components/ui/Header';
+import Card from '@/components/ui/Card';
+import Segmented from '@/components/ui/Segmented';
 import EmptyState from '@/components/ui/EmptyState';
 import { useAuth } from '@/hooks/useAuth';
+import { useAllContests } from '@/hooks/useData';
+import { Contest, ContestStatus } from '@/models/types';
 import { colors, radius, shadow, spacing } from '@/constants/theme';
+import { formatSchedule } from '@/utils/format';
+
+const TABS: { key: ContestStatus; label: string }[] = [
+  { key: 'upcoming', label: 'Upcoming' },
+  { key: 'ongoing', label: 'Ongoing' },
+  { key: 'resulted', label: 'Resulted' },
+];
+const STATUS_COLOR: Record<Contest['status'], string> = {
+  upcoming: colors.info, ongoing: colors.success, resulted: colors.textMuted,
+};
 
 export default function StaffPanel() {
   const { user } = useAuth();
+  const router = useRouter();
+  const contests = useAllContests();
+  const [tab, setTab] = useState<ContestStatus>('upcoming');
 
   if (user?.role !== 'admin' && user?.role !== 'staff') {
     return (
@@ -18,30 +36,40 @@ export default function StaffPanel() {
     );
   }
 
-  const actions = [
-    { label: 'Enter Match Results', icon: 'create-outline', desc: 'Record kills & placement per team' },
-    { label: 'Share Room Codes', icon: 'key-outline', desc: 'Set room ID & password for a contest' },
-    { label: 'Moderate Registrations', icon: 'shield-checkmark-outline', desc: 'Approve or reject team entries' },
-  ];
+  const list = contests.filter((c) => c.status === tab);
 
   return (
     <View style={styles.bg}>
       <Header title="Staff Panel" />
-      <ScrollView contentContainerStyle={{ padding: spacing.lg }}>
-        <View style={styles.phaseBanner}>
-          <Ionicons name="construct" size={18} color={colors.primaryDark} />
-          <Text style={styles.phaseTxt}>Staff tools arrive in Phase 2.</Text>
-        </View>
-        {actions.map((a) => (
-          <View key={a.label} style={[styles.action, shadow.sm]}>
-            <View style={styles.actionIcon}><Ionicons name={a.icon as any} size={20} color={colors.primary} /></View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.actionLabel}>{a.label}</Text>
-              <Text style={styles.actionDesc}>{a.desc}</Text>
-            </View>
-            <View style={styles.soon}><Text style={styles.soonTxt}>Phase 2</Text></View>
-          </View>
-        ))}
+      <View style={styles.intro}>
+        <Text style={styles.introTxt}>Share room codes, enter results and moderate players for each match.</Text>
+      </View>
+      <View style={styles.segment}><Segmented options={TABS} value={tab} onChange={setTab} /></View>
+      <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingTop: spacing.md }}>
+        {list.length === 0 ? (
+          <EmptyState icon="game-controller-outline" title={`No ${tab} matches`} />
+        ) : (
+          list.map((c) => (
+            <Pressable key={c.id} style={[styles.card, shadow.sm]} onPress={() => router.push(`/manage/${c.id}`)}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.title} numberOfLines={1}>{c.title}</Text>
+                <Text style={styles.meta}>{formatSchedule(c.schedule)} • {c.filledSlots}/{c.totalSlots}</Text>
+                <View style={styles.tagsRow}>
+                  <View style={[styles.badge, { backgroundColor: STATUS_COLOR[c.status] }]}>
+                    <Text style={styles.badgeTxt}>{c.status.toUpperCase()}</Text>
+                  </View>
+                  {!!c.roomId && (
+                    <View style={styles.roomTag}>
+                      <Ionicons name="key" size={11} color={colors.primaryDark} />
+                      <Text style={styles.roomTxt}>Room set</Text>
+                    </View>
+                  )}
+                </View>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.textFaint} />
+            </Pressable>
+          ))
+        )}
       </ScrollView>
     </View>
   );
@@ -49,18 +77,18 @@ export default function StaffPanel() {
 
 const styles = StyleSheet.create({
   bg: { flex: 1, backgroundColor: colors.bg },
-  phaseBanner: {
-    flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.mint,
-    borderRadius: radius.md, padding: 12, marginBottom: spacing.lg,
-  },
-  phaseTxt: { flex: 1, fontSize: 12, color: colors.primaryDark, fontWeight: '600' },
-  action: {
+  intro: { paddingHorizontal: spacing.lg, paddingTop: spacing.md },
+  introTxt: { fontSize: 13, color: colors.textMuted, fontWeight: '600' },
+  segment: { padding: spacing.lg, paddingBottom: 0 },
+  card: {
     flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.surface,
     borderRadius: radius.md, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: colors.border,
   },
-  actionIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: colors.mint, alignItems: 'center', justifyContent: 'center' },
-  actionLabel: { fontSize: 15, fontWeight: '800', color: colors.text },
-  actionDesc: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
-  soon: { backgroundColor: colors.surfaceMuted, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999 },
-  soonTxt: { fontSize: 11, fontWeight: '800', color: colors.textMuted },
+  title: { fontSize: 15, fontWeight: '800', color: colors.text },
+  meta: { fontSize: 12, color: colors.textMuted, marginTop: 3, fontWeight: '600' },
+  tagsRow: { flexDirection: 'row', gap: 8, marginTop: 8 },
+  badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.pill },
+  badgeTxt: { fontSize: 10, fontWeight: '900', color: '#fff' },
+  roomTag: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: colors.mint, paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.pill },
+  roomTxt: { fontSize: 10, fontWeight: '800', color: colors.primaryDark },
 });

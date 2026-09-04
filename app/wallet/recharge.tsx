@@ -6,7 +6,7 @@ import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import { useAuth } from '@/hooks/useAuth';
-import { backend, backendKind } from '@/services/backend';
+import { backend } from '@/services/backend';
 import { colors, radius, spacing } from '@/constants/theme';
 
 const QUICK = [20, 50, 100, 200, 500, 1000];
@@ -30,9 +30,7 @@ export default function Recharge() {
       await backend.createDeposit(user!, n);
       Alert.alert(
         'Recharge submitted',
-        backendKind === 'local'
-          ? 'Coins added to your wallet (demo auto-approve).'
-          : 'Your deposit request is pending admin approval.',
+        'Your deposit request is pending admin approval. Coins are added once approved.',
         [{ text: 'OK', onPress: () => router.back() }]
       );
     } catch (e: any) {

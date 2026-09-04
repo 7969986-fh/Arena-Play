@@ -2,11 +2,11 @@
 
 A **Free Fire esports contest** mobile app built with **React Native (Expo)** and **TypeScript**. Players browse esports games, join paid/free contests with **virtual coins**, get room codes, and climb the leaderboard. Features a soft, light, 3D-styled UI with smooth animations.
 
-> Phase 1 (this build) delivers the full **core player flow** end-to-end. Admin & staff panels are scaffolded with role gating and land fully in Phase 2.
+> Phase 1 delivers the full **core player flow**. **Phase 2 (done)** adds the full **admin & staff panels**.
 
-## Features (Phase 1)
+## Player features
 
-- **Auth** — email/password sign up & sign in
+- **Auth** — email/password sign up & sign in (new players get a welcome bonus)
 - **Home** — esports games grid, promo banner, "My Matches" shortcuts
 - **Contests** — per game, split into Ongoing / Upcoming / Resulted
 - **Contest details** — live countdown, prize breakdown, rules, room credentials (once joined & live)
@@ -15,6 +15,33 @@ A **Free Fire esports contest** mobile app built with **React Native (Expo)** an
 - **Leaderboard** — Weekly / Monthly / Fulltime
 - **Refer & Earn**, **My Statistics**, **Profile**, **Notifications**, FAQ / About / Privacy / Contact
 - **Role gating** — `player` / `staff` / `admin`; staff & admin see extra panels in the menu
+
+## Admin panel (Phase 2)
+
+- **Manage contests** — create (with auto prize split), edit, delete
+- **Deposits** — approve/reject recharge requests (approval credits the player's wallet)
+- **Withdrawals** — approve (mark paid) or reject (refunds held winnings)
+- **Manage users** — cycle roles (player → staff → admin), ban/unban
+- **Send notifications** — broadcast announcements to all players
+- Live dashboard with pending counts
+
+## Staff panel (Phase 2)
+
+- Browse contests and open the **Manage Match** screen to:
+  - **Share room ID & password** and set the match live
+  - **Enter results** (kills + placement per player) and **declare** — distributes prizes to winners' wallets and updates stats
+  - **Moderate** — remove a player (refunds their entry fee, frees the slot)
+
+## Demo logins (offline mode)
+
+The offline backend seeds two staff accounts so you can try the panels immediately:
+
+| Role  | Email               | Password   |
+|-------|---------------------|------------|
+| Admin | `admin@arena.test`  | `admin123` |
+| Staff | `staff@arena.test`  | `admin123` |
+
+> On native (Android/iOS) confirmation dialogs (logout, declare results, ban, delete) use the OS alert. On the web preview those confirm callbacks are a no-op — use a device/emulator for those actions.
 
 ## Tech Stack
 
