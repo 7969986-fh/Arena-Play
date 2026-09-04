@@ -36,3 +36,7 @@ GoogleService-Info.plist
 # IDE
 .idea/
 .vscode/
+
+# Generated native projects (regenerated via `expo prebuild`)
+/android/
+/ios/
