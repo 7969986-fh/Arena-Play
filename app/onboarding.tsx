@@ -10,14 +10,10 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import Button from '@/components/ui/Button';
+import { useOnboarding } from '@/hooks/useOnboarding';
 import { colors, spacing } from '@/constants/theme';
-
-/** Set once the intro has been seen, so it never shows again. */
-export const ONBOARDED_KEY = 'arenaplay.onboarded';
 
 const SLIDES = [
   {
@@ -41,7 +37,7 @@ const SLIDES = [
 ];
 
 export default function Onboarding() {
-  const router = useRouter();
+  const { complete } = useOnboarding();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const scroller = useRef<ScrollView>(null);
@@ -49,11 +45,9 @@ export default function Onboarding() {
 
   const last = index === SLIDES.length - 1;
 
-  async function finish() {
-    // Recorded before navigating so a slow write cannot show the intro twice.
-    await AsyncStorage.setItem(ONBOARDED_KEY, '1').catch(() => {});
-    router.replace('/(auth)/login');
-  }
+  // Marking it complete is enough: the router watches that flag and moves
+  // on by itself, so navigating here as well would race it.
+  const finish = complete;
 
   function next() {
     if (last) return finish();

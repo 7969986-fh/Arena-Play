@@ -6,9 +6,8 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as SplashScreen from 'expo-splash-screen';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthProvider, useAuth } from '@/hooks/useAuth';
-import { ONBOARDED_KEY } from '@/app/onboarding';
+import { OnboardingProvider, useOnboarding } from '@/hooks/useOnboarding';
 import { ToastProvider } from '@/components/ui/Toast';
 import { colors } from '@/constants/theme';
 
@@ -20,13 +19,7 @@ function RootNavigator() {
   const router = useRouter();
   // undefined until the flag has been read, so routing waits rather than
   // flashing the login screen at a first-time player.
-  const [onboarded, setOnboarded] = useState<boolean | undefined>(undefined);
-
-  useEffect(() => {
-    AsyncStorage.getItem(ONBOARDED_KEY)
-      .then((v) => setOnboarded(v === '1'))
-      .catch(() => setOnboarded(true));
-  }, []);
+  const { onboarded } = useOnboarding();
 
   useEffect(() => {
     if (initializing || onboarded === undefined) return;
@@ -89,10 +82,12 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <ToastProvider>
+          <OnboardingProvider>
           <AuthProvider>
             <StatusBar style="dark" />
             <RootNavigator />
           </AuthProvider>
+          </OnboardingProvider>
         </ToastProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
