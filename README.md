@@ -4,6 +4,21 @@ A **Free Fire esports contest** mobile app built with **React Native (Expo)** an
 
 > Phase 1 delivers the full **core player flow**. **Phase 2 (done)** adds the full **admin & staff panels**.
 
+## 📱 Download the APK
+
+**[⬇️ Download the latest APK](https://github.com/7969986-fh/Arena-Play/releases/latest)** — open this on your Android phone, tap the `.apk`, and allow "install from unknown sources" if prompted.
+
+### Building a new APK (no tools needed)
+
+Every push builds an APK automatically. To build one on demand:
+
+1. Go to the **Actions** tab
+2. Click **Build APK** in the left sidebar
+3. Click **Run workflow** → **Run workflow**
+4. Wait ~12 minutes, then grab it from [Releases](https://github.com/7969986-fh/Arena-Play/releases)
+
+The build runs entirely on GitHub's servers — no Android Studio, Node, or Expo account required. The APK is signed with a debug key, which is fine for installing and sharing but **not** for Play Store upload (that needs a real keystore).
+
 ## Player features
 
 - **Auth** — email/password sign up & sign in (new players get a welcome bonus)
