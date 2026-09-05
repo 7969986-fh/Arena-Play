@@ -492,16 +492,23 @@ create policy proofs_upload on storage.objects for insert to authenticated
   with check (bucket_id = 'proofs');
 
 -- ---------------------------------------------------------------- realtime
--- Lets the app receive live updates instead of polling.
+-- Lets the app receive live updates instead of polling. Wrapped so a
+-- re-run does not fail on tables already in the publication.
 
-alter publication supabase_realtime add table public.users;
-alter publication supabase_realtime add table public.contests;
-alter publication supabase_realtime add table public.registrations;
-alter publication supabase_realtime add table public.transactions;
-alter publication supabase_realtime add table public.deposits;
-alter publication supabase_realtime add table public.withdrawals;
-alter publication supabase_realtime add table public.notifications;
-alter publication supabase_realtime add table public.games;
+do $$
+declare t text;
+begin
+  foreach t in array array[
+    'users','contests','registrations','transactions',
+    'deposits','withdrawals','notifications','games'
+  ] loop
+    begin
+      execute format('alter publication supabase_realtime add table public.%I', t);
+    exception when duplicate_object then
+      -- Already in the publication from a previous run; nothing to do.
+    end;
+  end loop;
+end $$;
 
 -- ---------------------------------------------------------------- catalog
 -- The nine game modes the app ships with.
