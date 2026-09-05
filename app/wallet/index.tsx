@@ -12,6 +12,7 @@ import { useTransactions } from '@/hooks/useData';
 import { walletTotal } from '@/models/types';
 import { colors, gradients, radius, shadow, spacing } from '@/constants/theme';
 import { relativeTime } from '@/utils/format';
+import CountUp from '@/components/ui/CountUp';
 
 export default function WalletScreen() {
   const router = useRouter();
@@ -24,7 +25,7 @@ export default function WalletScreen() {
       <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
         <LinearGradient colors={gradients.primary} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.balanceCard, shadow.lg]}>
           <Text style={styles.balanceLabel}>Total Balance</Text>
-          <Text style={styles.balance}>₹ {walletTotal(user?.wallet)}</Text>
+          <CountUp value={walletTotal(user?.wallet)} prefix="₹ " style={styles.balance} />
           <View style={styles.subBalances}>
             <View style={styles.subItem}>
               <Text style={styles.subLabel}>Deposit</Text>

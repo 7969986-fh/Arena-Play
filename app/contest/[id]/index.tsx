@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Linking } from 'react-native';
 import { ImageBackground, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -14,10 +14,12 @@ import { cancelMatchReminders } from '@/utils/notify';
 import { useContest, useUserRegistrations } from '@/hooks/useData';
 import { useAuth } from '@/hooks/useAuth';
 import { contestArt } from '@/constants/gameArt';
-import { shareContest } from '@/utils/share';
+import { shareContest, shareWin } from '@/utils/share';
 import { colors, radius, shadow, spacing } from '@/constants/theme';
 import { countdown, formatSchedule } from '@/utils/format';
 import { useToast } from '@/components/ui/Toast';
+import CountUp from '@/components/ui/CountUp';
+import Confetti from '@/components/Confetti';
 
 function Chip({ label, value }: { label: string; value: string }) {
   return (
@@ -38,11 +40,26 @@ export default function ContestDetails() {
   const [, tick] = useState(0);
   const [proof, setProof] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [celebrate, setCelebrate] = useState(false);
+  const celebrated = useRef(false);
 
   useEffect(() => {
     const t = setInterval(() => tick((n) => n + 1), 1000);
     return () => clearInterval(t);
   }, []);
+
+  // Fire the celebration once per visit, the moment a win becomes visible.
+  // Reads the registration straight from `regs` because `joined` is derived
+  // below the early return that hooks must run before.
+  const myWin = regs.find((r) => r.contestId === contest?.id)?.wonAmount ?? 0;
+  useEffect(() => {
+    if (celebrated.current) return;
+    if (contest?.status === 'resulted' && myWin > 0) {
+      celebrated.current = true;
+      setCelebrate(true);
+      setTimeout(() => setCelebrate(false), 2600);
+    }
+  }, [contest?.status, myWin]);
 
   // A finished match should not still buzz the player about starting.
   useEffect(() => {
@@ -83,6 +100,35 @@ export default function ContestDetails() {
           />
           <Text style={styles.bannerTitle}>{contest.title}</Text>
         </ImageBackground>
+
+        {joined && contest.status === 'resulted' && (
+          <Card
+            style={[styles.resultCard, joined.wonAmount > 0 && styles.resultWon]}
+            elevation="sm"
+          >
+            <Text style={styles.resultLabel}>
+              {joined.wonAmount > 0 ? '🎉 You won!' : 'Your result'}
+            </Text>
+            {joined.wonAmount > 0 ? (
+              <CountUp value={joined.wonAmount} prefix="₹" style={styles.resultAmount} />
+            ) : (
+              <Text style={styles.resultNone}>No prize this time</Text>
+            )}
+            <Text style={styles.resultMeta}>
+              Rank #{joined.placement || '—'} • {joined.kills} kill
+              {joined.kills === 1 ? '' : 's'}
+            </Text>
+            {joined.wonAmount > 0 && (
+              <Pressable
+                style={styles.shareWin}
+                onPress={() => shareWin(contest.title, joined.wonAmount, joined.placement)}
+              >
+                <Ionicons name="share-social" size={15} color={colors.primaryDark} />
+                <Text style={styles.shareWinTxt}>Share your win</Text>
+              </Pressable>
+            )}
+          </Card>
+        )}
 
         <Card style={styles.countdownCard} elevation="sm">
           <Text style={styles.countdownLabel}>
@@ -236,6 +282,7 @@ export default function ContestDetails() {
           />
         )}
       </ScrollView>
+      <Confetti show={celebrate} />
     </View>
   );
 }
@@ -267,6 +314,18 @@ const styles = StyleSheet.create({
   roomValue: { fontSize: 16, fontWeight: '900', color: '#7A5200', letterSpacing: 1 },
   sectionTitle: { fontSize: 17, fontWeight: '900', color: colors.text, marginTop: spacing.lg, marginBottom: 10 },
   rankLabel: { fontSize: 14, fontWeight: '800', color: colors.text },
+  resultCard: { marginTop: spacing.md, alignItems: 'center', backgroundColor: colors.surfaceMuted },
+  resultWon: { backgroundColor: colors.mint },
+  resultLabel: { fontSize: 14, fontWeight: '900', color: colors.primaryDark },
+  resultAmount: { fontSize: 34, fontWeight: '900', color: colors.primary, marginTop: 4 },
+  resultNone: { fontSize: 17, fontWeight: '800', color: colors.textMuted, marginTop: 6 },
+  resultMeta: { fontSize: 12.5, fontWeight: '700', color: colors.textMuted, marginTop: 4 },
+  shareWin: {
+    flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12,
+    backgroundColor: 'rgba(255,255,255,0.9)', paddingHorizontal: 14, paddingVertical: 8,
+    borderRadius: 999,
+  },
+  shareWinTxt: { fontSize: 12.5, fontWeight: '800', color: colors.primaryDark },
   linkRow: { flexDirection: 'row', gap: 10, marginTop: spacing.md },
   linkBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,

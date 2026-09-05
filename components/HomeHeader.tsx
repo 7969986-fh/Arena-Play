@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { gradients, shadow } from '@/constants/theme';
 import { walletTotal, Wallet } from '@/models/types';
+import CountUp from '@/components/ui/CountUp';
 
 export default function HomeHeader({ username, wallet }: { username: string; wallet?: Wallet }) {
   const insets = useSafeAreaInsets();
@@ -31,7 +32,7 @@ export default function HomeHeader({ username, wallet }: { username: string; wal
         <View style={styles.right}>
           <Pressable style={styles.coinPill} onPress={() => router.push('/wallet')}>
             <View style={styles.coinIcon}><Text style={styles.coinSym}>₹</Text></View>
-            <Text style={styles.coinTxt}>{walletTotal(wallet)}</Text>
+            <CountUp value={walletTotal(wallet)} style={styles.coinTxt} />
           </Pressable>
           <Pressable style={styles.bell} onPress={() => router.push('/notifications')}>
             <Ionicons name="notifications" size={20} color="#0A9A82" />
