@@ -336,6 +336,10 @@ class FirebaseBackend implements Backend {
     await updateDoc(doc(db, 'registrations', registrationId), { proofUrl });
   }
 
+  async claimDailyBonus(): Promise<{ reward: number; streak: number }> {
+    throw new Error('Daily bonus needs Supabase.');
+  }
+
   watchRecentWins(cb: (w: RecentWin[]) => void): Unsub {
     // Firestore cannot join the contest title in one query and this build
     // is superseded by Supabase, so the feed stays empty here.

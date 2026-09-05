@@ -437,6 +437,12 @@ class SupabaseBackend implements Backend {
     if (error) throw new Error(error.message);
   }
 
+  async claimDailyBonus() {
+    const { data, error } = await supabase.rpc('claim_daily_bonus');
+    if (error) throw new Error(error.message);
+    return data as { reward: number; streak: number };
+  }
+
   watchRecentWins(cb: (w: RecentWin[]) => void): Unsub {
     return live('registrations', async () => {
       const { data, error } = await supabase

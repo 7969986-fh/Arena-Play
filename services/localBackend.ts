@@ -313,6 +313,33 @@ class LocalBackend implements Backend {
     await this.persist('withdrawals');
   }
 
+  async claimDailyBonus() {
+    await this.ready;
+    const uid = this.get<{ uid: string | null }>('session').uid;
+    const u = this.get<AppUser[]>('users').find((x) => x.uid === uid);
+    if (!u) throw new Error('Not signed in.');
+
+    const today = new Date().toDateString();
+    const yesterday = new Date(Date.now() - 86400_000).toDateString();
+    const anyUser = u as AppUser & { lastClaim?: string; streak?: number };
+    if (anyUser.lastClaim === today) {
+      throw new Error('Already claimed today. Come back tomorrow.');
+    }
+
+    const streak = anyUser.lastClaim === yesterday ? Math.min((anyUser.streak ?? 0) + 1, 7) : 1;
+    const reward = [0, 2, 3, 5, 8, 12, 18, 25][streak];
+
+    anyUser.lastClaim = today;
+    anyUser.streak = streak;
+    u.wallet.bonus += reward;
+    await this.saveUser(u);
+    await this.addTransaction(u.uid, 'credit', reward, 'bonus',
+      `Daily bonus — day ${streak}`,
+      u.wallet.deposit + u.wallet.winnings + u.wallet.bonus);
+
+    return { reward, streak };
+  }
+
   watchRecentWins(cb: (w: RecentWin[]) => void): Unsub {
     return this.subscribe('registrations', () => {
       const contests = this.get<Contest[]>('contests');

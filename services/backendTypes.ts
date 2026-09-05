@@ -99,6 +99,12 @@ export interface Backend {
    */
   watchRecentWins(cb: (w: RecentWin[]) => void): Unsub;
 
+  /**
+   * Claims today's login bonus, returning the reward and the streak day it
+   * landed on. Throws when it has already been claimed today.
+   */
+  claimDailyBonus(): Promise<{ reward: number; streak: number }>;
+
   // Leaderboard / misc
   watchLeaderboard(cb: (u: AppUser[]) => void): Unsub;
   watchNotifications(cb: (n: AppNotification[]) => void): Unsub;

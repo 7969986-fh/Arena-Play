@@ -443,6 +443,50 @@ begin
   end if;
 end $$;
 
+-- ------------------------------------------------------------ daily bonus
+-- Streak state lives on the user row; the claim runs server-side so the
+-- reward cannot be granted by a tampered client or claimed twice a day.
+
+alter table public.users add column if not exists last_claim_date date;
+alter table public.users add column if not exists claim_streak int not null default 0;
+
+-- Day 1 through 7 of a streak, then it holds at the day-7 value.
+create or replace function public.streak_reward(day int)
+returns int language sql immutable as $$
+  select case least(greatest(day, 1), 7)
+    when 1 then 2 when 2 then 3 when 3 then 5 when 4 then 8
+    when 5 then 12 when 6 then 18 else 25 end;
+$$;
+
+create or replace function public.claim_daily_bonus()
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare u record; today date := current_date; next_streak int; reward int;
+begin
+  select * into u from public.users where uid = auth.uid() for update;
+  if u is null then raise exception 'Not signed in.'; end if;
+  if u.banned then raise exception 'Your account is suspended.'; end if;
+  if u.last_claim_date = today then
+    raise exception 'Already claimed today. Come back tomorrow.';
+  end if;
+
+  -- Consecutive only when the last claim was yesterday; any longer gap
+  -- restarts the streak at one.
+  next_streak := case when u.last_claim_date = today - 1
+                      then least(u.claim_streak + 1, 7) else 1 end;
+  reward := public.streak_reward(next_streak);
+
+  update public.users
+     set wallet = jsonb_set(wallet, '{bonus}', to_jsonb((wallet->>'bonus')::int + reward)),
+         last_claim_date = today,
+         claim_streak = next_streak
+   where uid = u.uid;
+
+  perform public.log_txn(u.uid, 'credit', reward, 'bonus',
+    'Daily bonus — day ' || next_streak);
+
+  return jsonb_build_object('reward', reward, 'streak', next_streak);
+end $$;
+
 -- ---------------------------------------------------------------- signup
 -- Creates the app-side profile whenever an auth user is created, so the
 -- client never has to write the wallet or role itself.
