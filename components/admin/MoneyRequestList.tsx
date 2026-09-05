@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
+import { Ionicons } from '@expo/vector-icons';
 import Header from '@/components/ui/Header';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -27,6 +29,8 @@ interface Props {
 export default function MoneyRequestList({ title, requests, onApprove, onReject, approveLabel = 'Approve' }: Props) {
   const [tab, setTab] = useState<RequestStatus>('pending');
   const [busy, setBusy] = useState<string | null>(null);
+  // Screenshot opened fullscreen, so the admin can actually read the UTR on it.
+  const [zoom, setZoom] = useState<string | null>(null);
   const list = requests.filter((r) => r.status === tab);
 
   async function run(fn: () => Promise<void>, id: string) {
@@ -52,6 +56,33 @@ export default function MoneyRequestList({ title, requests, onApprove, onReject,
                 </View>
                 <Coin amount={r.amount} size={17} />
               </View>
+              {(r.utr || r.payoutUpi) && (
+                <Pressable
+                  style={styles.refRow}
+                  onPress={() => {
+                    const v = r.utr || r.payoutUpi || '';
+                    Clipboard.setStringAsync(v);
+                    Alert.alert('Copied', v);
+                  }}
+                >
+                  <Text style={styles.refLabel}>{r.utr ? 'UTR' : 'Pay to'}</Text>
+                  <Text style={styles.refVal} numberOfLines={1}>{r.utr || r.payoutUpi}</Text>
+                  <Ionicons name="copy-outline" size={15} color={colors.primary} />
+                </Pressable>
+              )}
+
+              {r.proofUrl ? (
+                <Pressable onPress={() => setZoom(r.proofUrl!)} style={styles.proofWrap}>
+                  <Image source={{ uri: r.proofUrl }} style={styles.proof} resizeMode="cover" />
+                  <View style={styles.proofTag}>
+                    <Ionicons name="expand-outline" size={13} color="#fff" />
+                    <Text style={styles.proofTagTxt}>Tap to view proof</Text>
+                  </View>
+                </Pressable>
+              ) : tab === 'pending' ? (
+                <Text style={styles.noProof}>No payment screenshot attached</Text>
+              ) : null}
+
               {tab === 'pending' && (
                 <View style={styles.actions}>
                   <Button label="Reject" variant="outline" size="sm" fullWidth={false}
@@ -73,6 +104,15 @@ export default function MoneyRequestList({ title, requests, onApprove, onReject,
           ))
         )}
       </ScrollView>
+
+      <Modal visible={!!zoom} transparent animationType="fade" onRequestClose={() => setZoom(null)}>
+        <Pressable style={styles.zoomBg} onPress={() => setZoom(null)}>
+          {zoom ? <Image source={{ uri: zoom }} style={styles.zoomImg} resizeMode="contain" /> : null}
+          <View style={styles.zoomClose}>
+            <Ionicons name="close" size={22} color="#fff" />
+          </View>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -80,6 +120,23 @@ export default function MoneyRequestList({ title, requests, onApprove, onReject,
 const styles = StyleSheet.create({
   bg: { flex: 1, backgroundColor: colors.bg },
   segment: { padding: spacing.lg, paddingBottom: 0 },
+  refRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10,
+    backgroundColor: colors.mint, borderRadius: radius.sm, paddingHorizontal: 10, paddingVertical: 8,
+  },
+  refLabel: { fontSize: 11, fontWeight: '800', color: colors.textMuted },
+  refVal: { flex: 1, fontSize: 13, fontWeight: '800', color: colors.primaryDark },
+  proofWrap: { marginTop: 10, borderRadius: radius.md, overflow: 'hidden' },
+  proof: { width: '100%', height: 150, backgroundColor: colors.mint },
+  proofTag: {
+    position: 'absolute', bottom: 8, right: 8, flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: 'rgba(0,0,0,0.6)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999,
+  },
+  proofTagTxt: { color: '#fff', fontSize: 10.5, fontWeight: '700' },
+  noProof: { marginTop: 10, fontSize: 11.5, color: colors.danger, fontWeight: '700' },
+  zoomBg: { flex: 1, backgroundColor: 'rgba(0,0,0,0.92)', alignItems: 'center', justifyContent: 'center' },
+  zoomImg: { width: '100%', height: '82%' },
+  zoomClose: { position: 'absolute', top: 46, right: 20 },
   card: { marginBottom: 12 },
   rowTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   user: { fontSize: 16, fontWeight: '800', color: colors.text },

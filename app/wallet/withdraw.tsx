@@ -26,7 +26,7 @@ export default function Withdraw() {
     if (!upi.trim()) { Alert.alert('UPI required', 'Enter your UPI ID to receive the payout.'); return; }
     setLoading(true);
     try {
-      await backend.createWithdrawal(user!, n);
+      await backend.createWithdrawal(user!, n, upi.trim());
       Alert.alert('Withdrawal requested', 'Your request is pending admin approval.', [
         { text: 'OK', onPress: () => router.back() },
       ]);
