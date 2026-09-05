@@ -7,12 +7,12 @@
  * shows a friendly "connect Firebase" notice instead of crashing.
  */
 export const firebaseConfig = {
-  apiKey: 'YOUR_API_KEY',
-  authDomain: 'YOUR_PROJECT.firebaseapp.com',
-  projectId: 'YOUR_PROJECT_ID',
-  storageBucket: 'YOUR_PROJECT.appspot.com',
-  messagingSenderId: 'YOUR_SENDER_ID',
-  appId: 'YOUR_APP_ID',
+  apiKey: 'YOUR_API_KEY',                      // ← need from web app
+  authDomain: 'arena-play-885d7.firebaseapp.com',
+  projectId: 'arena-play-885d7',
+  storageBucket: 'arena-play-885d7.appspot.com',
+  messagingSenderId: '858917302261',
+  appId: 'YOUR_WEB_APP_ID',                    // ← need from web app
 };
 
 export const isFirebaseConfigured =
