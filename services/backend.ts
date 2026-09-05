@@ -8,17 +8,33 @@ import { localBackend } from '@/services/localBackend';
  * otherwise the local offline store so the app stays fully usable with no
  * cloud setup at all.
  *
- * Requires are lazy so an unconfigured cloud SDK never initializes.
+ * Requires are lazy so an unconfigured cloud SDK never initializes, and are
+ * guarded because this module is loaded during app startup: a cloud adapter
+ * that throws while loading (a missing native module, say) would otherwise
+ * kill the app before React mounts, leaving no error to show. Falling back
+ * to the offline store keeps the app openable and reports the reason.
  */
-let selected: Backend = localBackend;
-
-if (isSupabaseConfigured) {
-  const { supabaseBackend } = require('@/services/supabaseBackend');
-  selected = supabaseBackend;
-} else if (isFirebaseConfigured) {
-  const { firebaseBackend } = require('@/services/firebaseBackend');
-  selected = firebaseBackend;
+function pick(): Backend {
+  if (isSupabaseConfigured) {
+    try {
+      return require('@/services/supabaseBackend').supabaseBackend;
+    } catch (e) {
+      console.error('[backend] Supabase adapter failed to load', e);
+    }
+  }
+  if (isFirebaseConfigured) {
+    try {
+      return require('@/services/firebaseBackend').firebaseBackend;
+    } catch (e) {
+      console.error('[backend] Firebase adapter failed to load', e);
+    }
+  }
+  return localBackend;
 }
 
-export const backend = selected;
-export const backendKind = selected.kind;
+export const backend = pick();
+export const backendKind = backend.kind;
+
+/** True when a cloud backend was configured but could not be loaded. */
+export const backendDegraded =
+  (isSupabaseConfigured || isFirebaseConfigured) && backend.kind === 'local';

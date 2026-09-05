@@ -1,5 +1,3 @@
-import * as WebBrowser from 'expo-web-browser';
-import { makeRedirectUri } from 'expo-auth-session';
 import { supabase } from '@/lib/supabase';
 import {
   AppNotification,
@@ -220,6 +218,12 @@ class SupabaseBackend implements Backend {
    * the tab and catches the deep link back itself.
    */
   async signInWithGoogle() {
+    // Required lazily: these pull in native modules that are only needed
+    // once someone actually taps Google, and a problem loading them must
+    // not take down app startup.
+    const WebBrowser = require('expo-web-browser');
+    const { makeRedirectUri } = require('expo-auth-session');
+
     const redirectTo = makeRedirectUri({ scheme: 'arenaplay', path: 'auth-callback' });
 
     const { data, error } = await supabase.auth.signInWithOAuth({
