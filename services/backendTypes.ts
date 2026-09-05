@@ -46,7 +46,7 @@ export interface ResultRow {
 }
 
 export interface Backend {
-  readonly kind: 'local' | 'firebase';
+  readonly kind: 'local' | 'firebase' | 'supabase';
 
   // Auth
   onAuthChange(cb: (uid: string | null) => void): Unsub;
@@ -103,6 +103,9 @@ export interface Backend {
   setRoomCredentials(contestId: string, roomId: string, roomPassword: string, status?: Contest['status']): Promise<void>;
   declareResults(contestId: string, results: ResultRow[]): Promise<void>;
   removeRegistration(reg: Registration): Promise<void>;
+
+  /** Attaches a player's own result screenshot to their registration. */
+  setResultProof(registrationId: string, proofUrl: string): Promise<void>;
 
   /**
    * Stores a local image and returns a URL the app can render later.

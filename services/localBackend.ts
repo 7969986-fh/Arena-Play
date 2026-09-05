@@ -498,6 +498,14 @@ class LocalBackend implements Backend {
     await this.persist('users');
   }
 
+  async setResultProof(registrationId: string, proofUrl: string) {
+    await this.ready;
+    const r = this.get<Registration[]>('registrations').find((x) => x.id === registrationId);
+    if (!r) throw new Error('Registration not found.');
+    r.proofUrl = proofUrl;
+    await this.persist('registrations');
+  }
+
   async uploadImage(localUri: string) {
     // Offline mode renders straight from the device file, so there is
     // nothing to upload — the caller just gets the URI back.

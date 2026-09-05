@@ -18,6 +18,7 @@ import {
   runTransaction,
   setDoc,
   where,
+  updateDoc,
 } from 'firebase/firestore';
 import { db, firebaseAuth } from '@/lib/firebase';
 import {
@@ -321,6 +322,10 @@ class FirebaseBackend implements Backend {
         description: 'Registration removed — refund', balanceAfter: 0, createdAt: now(),
       } as Omit<Transaction, 'id'>);
     }
+  }
+
+  async setResultProof(registrationId: string, proofUrl: string) {
+    await updateDoc(doc(db, 'registrations', registrationId), { proofUrl });
   }
 
   async uploadImage(localUri: string) {

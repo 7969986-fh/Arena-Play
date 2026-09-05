@@ -81,6 +81,8 @@ export interface Registration {
   kills: number;
   placement: number;
   wonAmount: number;
+  /** Player's own screenshot of their match result, for staff to verify. */
+  proofUrl?: string;
   joinedAt: number;
 }
 
