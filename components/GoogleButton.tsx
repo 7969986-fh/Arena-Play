@@ -5,14 +5,17 @@ import { useAuth } from '@/hooks/useAuth';
 import { colors, radius, shadow } from '@/constants/theme';
 
 /**
- * Renders nothing when the active backend has no Google support, so the
- * offline demo never shows a button that cannot work.
+ * Renders nothing unless Google sign-in is actually enabled on the project,
+ * so players never meet a button whose only outcome is an error. It appears
+ * on its own once the provider is switched on — no app update needed.
  */
 export default function GoogleButton({ label = 'Continue with Google' }: { label?: string }) {
-  const { signInWithGoogle, supportsGoogle } = useAuth();
+  const { signInWithGoogle, googleAvailable } = useAuth();
   const [busy, setBusy] = useState(false);
 
-  if (!supportsGoogle) return null;
+  // Undefined while the check is in flight: render nothing rather than
+  // flashing a button that might turn out to be unusable.
+  if (!googleAvailable) return null;
 
   async function press() {
     setBusy(true);

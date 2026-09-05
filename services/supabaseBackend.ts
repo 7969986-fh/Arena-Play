@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { supabaseConfig } from '@/lib/supabaseConfig';
 import {
   AppNotification,
   AppUser,
@@ -227,7 +228,40 @@ class SupabaseBackend implements Backend {
     if (error) throw new Error(error.message);
   }
 
-  readonly supportsGoogle = true;
+  /** Cached so every screen mount does not re-request the same settings. */
+  private authSettings?: Promise<Record<string, any>>;
+
+  /**
+   * Asks the project which sign-in providers are switched on.
+   *
+   * Supabase reports an unconfigured provider only when the user has already
+   * tapped the button and the request has failed, which is far too late.
+   * Reading it up front lets the UI offer only what actually works.
+   */
+  private settings() {
+    if (!this.authSettings) {
+      this.authSettings = fetch(`${supabaseConfig.url}/auth/v1/settings`, {
+        headers: { apikey: supabaseConfig.publishableKey },
+      })
+        .then((r) => r.json())
+        .catch((e) => {
+          console.warn('[supabase] could not read auth settings', e?.message);
+          return {};
+        });
+    }
+    return this.authSettings;
+  }
+
+  async isGoogleAvailable() {
+    return !!(await this.settings())?.external?.google;
+  }
+
+  /** True when new sign-ups must click an emailed link before they can play. */
+  async requiresEmailConfirmation() {
+    const s = await this.settings();
+    // mailer_autoconfirm true means Supabase confirms the address itself.
+    return s?.mailer_autoconfirm === false;
+  }
 
   /**
    * Opens Google in a system browser tab and exchanges the code it returns

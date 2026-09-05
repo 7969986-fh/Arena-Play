@@ -63,7 +63,9 @@ class FirebaseBackend implements Backend {
     await signInWithEmailAndPassword(firebaseAuth, email.trim(), password);
   }
 
-  readonly supportsGoogle = false;
+  async isGoogleAvailable() {
+    return false;
+  }
 
   async signInWithGoogle(): Promise<void> {
     throw new Error('Google sign-in needs Supabase. Use email and password.');

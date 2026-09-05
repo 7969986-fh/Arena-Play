@@ -10,7 +10,8 @@ interface AuthState {
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   signInWithGoogle: () => Promise<void>;
-  supportsGoogle: boolean;
+  /** Undefined until the check completes, so the button can stay hidden. */
+  googleAvailable: boolean | undefined;
 }
 
 const AuthContext = createContext<AuthState | undefined>(undefined);
@@ -19,6 +20,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [uid, setUid] = useState<string | null>(null);
   const [user, setUser] = useState<AppUser | null>(null);
   const [initializing, setInitializing] = useState(true);
+  const [googleAvailable, setGoogleAvailable] = useState<boolean | undefined>(undefined);
 
   useEffect(() => {
     // A slow or unreachable backend must not strand the user on the loading
@@ -39,6 +41,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
+    let alive = true;
+    backend
+      .isGoogleAvailable()
+      .then((ok) => alive && setGoogleAvailable(ok))
+      .catch(() => alive && setGoogleAvailable(false));
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  useEffect(() => {
     if (!uid) {
       setUser(null);
       return;
@@ -55,7 +68,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signIn: backend.signIn.bind(backend),
     signOut: backend.signOut.bind(backend),
     signInWithGoogle: backend.signInWithGoogle.bind(backend),
-    supportsGoogle: backend.supportsGoogle,
+    googleAvailable,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

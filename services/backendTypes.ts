@@ -56,10 +56,12 @@ export interface Backend {
   signIn(email: string, password: string): Promise<void>;
   signOut(): Promise<void>;
   /**
-   * Google OAuth. Backends that cannot offer it throw, and the UI hides the
-   * button when `supportsGoogle` is false.
+   * Whether Google sign-in can actually complete right now. Checked at
+   * runtime rather than assumed, so the button is never shown when tapping
+   * it could only fail — and appears on its own once the provider is
+   * switched on, with no app update.
    */
-  readonly supportsGoogle: boolean;
+  isGoogleAvailable(): Promise<boolean>;
   signInWithGoogle(): Promise<void>;
 
   // User
