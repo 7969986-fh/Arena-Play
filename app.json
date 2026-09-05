@@ -25,7 +25,13 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0FB89B"
       },
-      "package": "com.arenaplay.app"
+      "package": "com.arenaplay.app",
+      "permissions": [
+        "READ_MEDIA_IMAGES",
+        "POST_NOTIFICATIONS",
+        "INTERNET",
+        "SCHEDULE_EXACT_ALARM"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -50,6 +56,18 @@
           "android": {
             "ndkVersion": "27.1.12297006"
           }
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#0FB89B"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Arena Play needs your photos so you can attach payment and match result screenshots."
         }
       ]
     ],

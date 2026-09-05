@@ -10,6 +10,7 @@ import Button from '@/components/ui/Button';
 import Coin from '@/components/ui/Coin';
 import ScreenshotPicker from '@/components/ScreenshotPicker';
 import { backend } from '@/services/backend';
+import { cancelMatchReminders } from '@/utils/notify';
 import { useContest, useUserRegistrations } from '@/hooks/useData';
 import { useAuth } from '@/hooks/useAuth';
 import { gameArt } from '@/constants/gameArt';
@@ -40,6 +41,11 @@ export default function ContestDetails() {
     const t = setInterval(() => tick((n) => n + 1), 1000);
     return () => clearInterval(t);
   }, []);
+
+  // A finished match should not still buzz the player about starting.
+  useEffect(() => {
+    if (contest?.status === 'resulted') cancelMatchReminders(contest.id);
+  }, [contest?.status, contest?.id]);
 
   if (!contest) {
     return (

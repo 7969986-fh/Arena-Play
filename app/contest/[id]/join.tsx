@@ -10,6 +10,7 @@ import SlotGrid from '@/components/SlotGrid';
 import { useContest, useContestRegistrations } from '@/hooks/useData';
 import { useAuth } from '@/hooks/useAuth';
 import { backend } from '@/services/backend';
+import { scheduleMatchReminders } from '@/utils/notify';
 import { walletTotal } from '@/models/types';
 import { colors, spacing } from '@/constants/theme';
 
@@ -53,6 +54,8 @@ export default function JoinContest() {
         slotNumber: slot,
         inGameName: ign.trim(),
       });
+      // Reminders are best-effort and must not delay the confirmation.
+      scheduleMatchReminders(contest!);
       Alert.alert('Joined!', 'You have successfully joined the match.', [
         { text: 'OK', onPress: () => router.replace(`/contest/${contest!.id}`) },
       ]);
