@@ -12,7 +12,7 @@ import { SEED_GAMES } from '@/constants/games';
 import { computeWinnings } from '@/constants/scoring';
 import { buildSampleContests } from '@/services/sampleData';
 import { depositBonus } from '@/constants/app';
-import { Backend, ContestInput, JoinInput, ResultRow, Unsub, DepositProof } from '@/services/backendTypes';
+import { Backend, ContestInput, JoinInput, ResultRow, Unsub, DepositProof, RecentWin } from '@/services/backendTypes';
 
 /**
  * Local, offline backend backed by AsyncStorage.
@@ -311,6 +311,24 @@ class LocalBackend implements Backend {
     await this.addTransaction(u.uid, 'debit', amount, 'winnings',
       'Withdrawal request', u.wallet.deposit + u.wallet.winnings + u.wallet.bonus);
     await this.persist('withdrawals');
+  }
+
+  watchRecentWins(cb: (w: RecentWin[]) => void): Unsub {
+    return this.subscribe('registrations', () => {
+      const contests = this.get<Contest[]>('contests');
+      return this.get<Registration[]>('registrations')
+        .filter((r) => r.wonAmount > 0)
+        .sort((a, b) => b.joinedAt - a.joinedAt)
+        .slice(0, 20)
+        .map((r) => ({
+          id: r.id,
+          username: r.username,
+          amount: r.wonAmount,
+          contestTitle: contests.find((c) => c.id === r.contestId)?.title ?? 'a match',
+          placement: r.placement,
+          at: r.joinedAt,
+        }));
+    }, cb);
   }
 
   // ---- leaderboard / notifications / admin ----

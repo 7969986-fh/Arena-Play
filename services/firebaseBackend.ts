@@ -27,7 +27,7 @@ import {
 import { SEED_GAMES } from '@/constants/games';
 import { computeWinnings } from '@/constants/scoring';
 import { buildSampleContests } from '@/services/sampleData';
-import { Backend, ContestInput, JoinInput, ResultRow, Unsub, DepositProof } from '@/services/backendTypes';
+import { Backend, ContestInput, JoinInput, ResultRow, Unsub, DepositProof, RecentWin } from '@/services/backendTypes';
 
 const now = () => Date.now();
 
@@ -334,6 +334,13 @@ class FirebaseBackend implements Backend {
 
   async setResultProof(registrationId: string, proofUrl: string) {
     await updateDoc(doc(db, 'registrations', registrationId), { proofUrl });
+  }
+
+  watchRecentWins(cb: (w: RecentWin[]) => void): Unsub {
+    // Firestore cannot join the contest title in one query and this build
+    // is superseded by Supabase, so the feed stays empty here.
+    cb([]);
+    return () => {};
   }
 
   async uploadImage(localUri: string) {

@@ -16,6 +16,7 @@ import {
   JoinInput,
   ResultRow,
   Unsub,
+  RecentWin,
 } from '@/services/backendTypes';
 
 /* ------------------------------------------------------------------ rows
@@ -434,6 +435,26 @@ class SupabaseBackend implements Backend {
       p_upi: payoutUpi ?? '',
     });
     if (error) throw new Error(error.message);
+  }
+
+  watchRecentWins(cb: (w: RecentWin[]) => void): Unsub {
+    return live('registrations', async () => {
+      const { data, error } = await supabase
+        .from('registrations')
+        .select('id, username, won_amount, placement, joined_at, contests(title)')
+        .gt('won_amount', 0)
+        .order('joined_at', { ascending: false })
+        .limit(20);
+      if (error) throw error;
+      return (data ?? []).map((r: any) => ({
+        id: r.id,
+        username: r.username,
+        amount: r.won_amount,
+        contestTitle: r.contests?.title ?? 'a match',
+        placement: r.placement,
+        at: Number(r.joined_at),
+      }));
+    }, cb);
   }
 
   // ---- leaderboard / notifications ----

@@ -6,6 +6,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import HomeHeader from '@/components/HomeHeader';
 import GameCard from '@/components/GameCard';
 import PromoCarousel from '@/components/PromoCarousel';
+import WinnersFeed from '@/components/WinnersFeed';
 import { GameGridSkeleton } from '@/components/ui/Skeleton';
 import { useAuth } from '@/hooks/useAuth';
 import { useGames } from '@/hooks/useData';
@@ -32,6 +33,8 @@ export default function Home() {
         <Animated.View entering={FadeInDown.duration(400)}>
           <PromoCarousel />
         </Animated.View>
+
+        <WinnersFeed />
 
         {/* My Matches */}
         <Text style={styles.section}>My Matches</Text>

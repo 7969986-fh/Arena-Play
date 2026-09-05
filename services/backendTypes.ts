@@ -41,6 +41,16 @@ export interface DepositProof {
   utr?: string;
 }
 
+/** A single payout, denormalised for display in the winners feed. */
+export interface RecentWin {
+  id: string;
+  username: string;
+  amount: number;
+  contestTitle: string;
+  placement: number;
+  at: number;
+}
+
 export interface ResultRow {
   registrationId: string;
   kills: number;
@@ -82,6 +92,12 @@ export interface Backend {
   watchTransactions(uid: string, cb: (t: Transaction[]) => void): Unsub;
   createDeposit(user: AppUser, amount: number, proof?: DepositProof): Promise<void>;
   createWithdrawal(user: AppUser, amount: number, payoutUpi?: string): Promise<void>;
+
+  /**
+   * Most recent wins across all contests, for the home feed. Real payouts
+   * only — nothing synthesised — so the social proof it gives is honest.
+   */
+  watchRecentWins(cb: (w: RecentWin[]) => void): Unsub;
 
   // Leaderboard / misc
   watchLeaderboard(cb: (u: AppUser[]) => void): Unsub;
