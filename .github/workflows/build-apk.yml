@@ -12,6 +12,9 @@ jobs:
     name: Build Android APK
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    # Needed to publish the APK as a GitHub Release.
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout repository
@@ -52,10 +55,41 @@ jobs:
       - name: Show APK info
         run: ls -lh android/app/build/outputs/apk/release/
 
-      - name: Upload APK
+      # Give the APK a friendly, versioned filename.
+      - name: Rename APK
+        run: |
+          mkdir -p out
+          cp android/app/build/outputs/apk/release/app-release.apk \
+             "out/ArenaPlay-v1.0.0-build${{ github.run_number }}.apk"
+          ls -lh out/
+
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: arena-play-apk
-          path: android/app/build/outputs/apk/release/*.apk
+          path: out/*.apk
           if-no-files-found: error
           retention-days: 90
+
+      # Publish a Release so the APK has a direct download link that can be
+      # tapped straight from a phone browser (no zip to extract).
+      - name: Publish APK to Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: Arena Play v1.0.0 (build ${{ github.run_number }})
+          body: |
+            Installable Android APK for Arena Play.
+
+            **How to install:** tap the `.apk` below on your Android phone,
+            then allow "install from unknown sources" if prompted.
+
+            Demo logins (offline mode):
+            - Admin: `admin@arena.test` / `admin123`
+            - Staff: `staff@arena.test` / `admin123`
+
+            Note: signed with a debug key — fine for installing and sharing,
+            not for Play Store upload.
+          files: out/*.apk
+          draft: false
+          prerelease: false
