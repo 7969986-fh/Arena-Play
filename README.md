@@ -61,7 +61,7 @@ The offline backend seeds two staff accounts so you can try the panels immediate
 ## Tech Stack
 
 - Expo (React Native) + TypeScript + **Expo Router** (file-based navigation)
-- **Firebase** (Auth + Firestore) when configured
+- **Supabase** (Postgres + Auth + Realtime + Storage) when configured
 - **Offline local backend** (AsyncStorage) as a fallback so the app is fully usable and testable without any cloud setup
 - `react-native-reanimated` for animations, `expo-linear-gradient` for the 3D gradients
 
@@ -76,15 +76,41 @@ Open in **Expo Go** (scan the QR) or an Android/iOS emulator.
 
 By default the app runs in **offline demo mode** using a local AsyncStorage backend — you can register, join contests, recharge (auto-approved in demo) and browse everything immediately. Local demo deposits are auto-approved for convenience.
 
-## Going live with Firebase
+## Going live with Supabase
 
-1. Create a free Firebase project → add a **Web app** → copy the SDK config.
-2. Paste the values into `lib/firebaseConfig.ts` (replace the `YOUR_*` placeholders).
-3. Enable **Email/Password** auth and create a **Firestore** database.
-4. Seed the catalog: `npm run seed`.
-5. Restart the app — it now uses Firebase automatically.
+The app ships pointed at a Supabase project. Two setup steps are needed
+before it works:
 
-To make a user an **admin** or **staff**, set their `role` field to `"admin"` / `"staff"` in the `users` collection.
+1. **Create the database.** Open your project → **SQL Editor** → New query,
+   paste all of `supabase/schema.sql`, and Run. This creates every table,
+   the security policies, the storage bucket and the nine game modes.
+2. **Enable email sign-in.** Authentication → Providers → Email. For testing,
+   turn *off* "Confirm email" so accounts work immediately.
+
+Then set your own values in `constants/app.ts` — the UPI ID deposits are
+paid to, your support contacts, and the APK download link.
+
+### Making yourself admin
+
+Sign up in the app first, then in the SQL Editor run:
+
+```sql
+update public.users set role = 'admin' where email = 'you@example.com';
+```
+
+Use `'staff'` for people who only run matches.
+
+### How the money is protected
+
+Wallet balances are never writable from the app. Joining a contest,
+approving a deposit, requesting a withdrawal and declaring results each run
+as a database function that does its own permission check, and row-level
+security blocks direct writes. Slots use a uniqueness constraint plus a row
+lock, so two players cannot claim the same slot or overdraw one balance.
+
+The publishable key in `lib/supabaseConfig.ts` is meant to ship in the app —
+it only grants what those policies allow. Never put the **secret** /
+service-role key in the app; that one bypasses security entirely.
 
 ## Project structure
 
