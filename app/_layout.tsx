@@ -1,6 +1,6 @@
 import 'react-native-gesture-handler';
 import React, { useEffect } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -40,6 +40,29 @@ function RootNavigator() {
       <Stack.Screen name="contest/[id]/index" />
       <Stack.Screen name="contest/[id]/join" options={{ presentation: 'modal' }} />
     </Stack>
+  );
+}
+
+/**
+ * Expo Router renders this instead of crashing to the home screen when a
+ * startup error escapes. Showing the message on-device is the only way to
+ * diagnose a release build, which has no console attached.
+ */
+export function ErrorBoundary({ error, retry }: { error: Error; retry: () => Promise<void> }) {
+  return (
+    <ScrollView
+      style={{ flex: 1, backgroundColor: '#EAF4F0' }}
+      contentContainerStyle={{ padding: 24, paddingTop: 72 }}
+    >
+      <Text style={{ fontSize: 20, fontWeight: '700', color: '#0B3B33', marginBottom: 12 }}>
+        Something went wrong
+      </Text>
+      <Text style={{ fontSize: 14, color: '#0B3B33', marginBottom: 8 }}>{error.message}</Text>
+      <Text style={{ fontSize: 11, color: '#4A6B65', marginBottom: 24 }}>{error.stack}</Text>
+      <Text onPress={retry} style={{ fontSize: 16, fontWeight: '700', color: '#0FB89B' }}>
+        Tap to retry
+      </Text>
+    </ScrollView>
   );
 }
 
