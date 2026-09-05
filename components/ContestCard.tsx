@@ -1,9 +1,9 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { ImageBackground, Pressable, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Contest } from '@/models/types';
-import { gameGradient } from '@/constants/games';
+import { gameArt } from '@/constants/gameArt';
 import Coin from '@/components/ui/Coin';
 import { colors, radius, shadow } from '@/constants/theme';
 import { formatSchedule } from '@/utils/format';
@@ -26,21 +26,21 @@ export default function ContestCard({
   onPress: () => void;
   onJoin?: () => void;
 }) {
-  const grad = gameGradient(contest.gameId);
   const pct = Math.min(1, contest.filledSlots / contest.totalSlots);
   const spotsLeft = Math.max(0, contest.totalSlots - contest.filledSlots);
   const full = spotsLeft === 0;
 
   return (
     <Pressable style={[styles.card, shadow.md]} onPress={onPress}>
-      <LinearGradient colors={grad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.banner}>
+      <ImageBackground source={gameArt(contest.gameId)} style={styles.banner} imageStyle={styles.bannerImg}>
+        <LinearGradient colors={['rgba(0,0,0,0.45)', 'rgba(0,0,0,0.15)']} style={StyleSheet.absoluteFill} />
         <View style={styles.typePill}>
           <Text style={styles.typePillTxt}>
             {contest.matchType === 'free' ? 'FREE' : `₹${contest.entryFee}`}
           </Text>
         </View>
         <Text style={styles.bannerTitle} numberOfLines={2}>{contest.title}</Text>
-      </LinearGradient>
+      </ImageBackground>
 
       <View style={styles.body}>
         <Text style={styles.time}>
@@ -97,6 +97,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   banner: { padding: 14, minHeight: 78, justifyContent: 'space-between' },
+  bannerImg: { resizeMode: 'cover' },
   typePill: {
     alignSelf: 'flex-start',
     backgroundColor: 'rgba(0,0,0,0.35)',
