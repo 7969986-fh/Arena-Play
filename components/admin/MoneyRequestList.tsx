@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Alert, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
 import Header from '@/components/ui/Header';
@@ -11,6 +11,7 @@ import EmptyState from '@/components/ui/EmptyState';
 import { MoneyRequest, RequestStatus } from '@/models/types';
 import { colors, radius, spacing } from '@/constants/theme';
 import { relativeTime } from '@/utils/format';
+import { useToast } from '@/components/ui/Toast';
 
 const TABS: { key: RequestStatus; label: string }[] = [
   { key: 'pending', label: 'Pending' },
@@ -27,6 +28,7 @@ interface Props {
 }
 
 export default function MoneyRequestList({ title, requests, onApprove, onReject, approveLabel = 'Approve' }: Props) {
+  const toast = useToast();
   const [tab, setTab] = useState<RequestStatus>('pending');
   const [busy, setBusy] = useState<string | null>(null);
   // Screenshot opened fullscreen, so the admin can actually read the UTR on it.
@@ -35,7 +37,7 @@ export default function MoneyRequestList({ title, requests, onApprove, onReject,
 
   async function run(fn: () => Promise<void>, id: string) {
     setBusy(id);
-    try { await fn(); } catch (e: any) { Alert.alert('Error', e?.message ?? 'Failed'); }
+    try { await fn(); } catch (e: any) { toast.error('Error', e?.message ?? 'Failed'); }
     finally { setBusy(null); }
   }
 
@@ -62,7 +64,7 @@ export default function MoneyRequestList({ title, requests, onApprove, onReject,
                   onPress={() => {
                     const v = r.utr || r.payoutUpi || '';
                     Clipboard.setStringAsync(v);
-                    Alert.alert('Copied', v);
+                    toast.success('Copied', v);
                   }}
                 >
                   <Text style={styles.refLabel}>{r.utr ? 'UTR' : 'Pay to'}</Text>

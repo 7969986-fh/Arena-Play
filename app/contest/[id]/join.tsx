@@ -15,8 +15,10 @@ import { scheduleMatchReminders } from '@/utils/notify';
 import { DEFAULT_RULES } from '@/constants/rules';
 import { walletTotal } from '@/models/types';
 import { colors, spacing } from '@/constants/theme';
+import { useToast } from '@/components/ui/Toast';
 
 export default function JoinContest() {
+  const toast = useToast();
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { user } = useAuth();
@@ -41,9 +43,9 @@ export default function JoinContest() {
   }
 
   async function onJoin() {
-    if (!slot) { Alert.alert('Select a slot', 'Please choose an open match position.'); return; }
-    if (!ign.trim()) { Alert.alert('In-game name', 'Please enter your in-game username.'); return; }
-    if (!accepted) { Alert.alert('Accept the rules', 'Please read and accept the match rules before joining.'); return; }
+    if (!slot) { toast.error('Select a slot', 'Please choose an open match position.'); return; }
+    if (!ign.trim()) { toast.error('In-game name', 'Please enter your in-game username.'); return; }
+    if (!accepted) { toast.error('Accept the rules', 'Please read and accept the match rules before joining.'); return; }
     if (contest!.entryFee > 0 && balance < contest!.entryFee) {
       Alert.alert('Low balance', 'Please recharge your wallet to join this paid match.', [
         { text: 'Cancel', style: 'cancel' },
@@ -61,11 +63,10 @@ export default function JoinContest() {
       });
       // Reminders are best-effort and must not delay the confirmation.
       scheduleMatchReminders(contest!);
-      Alert.alert('Joined!', 'You have successfully joined the match.', [
-        { text: 'OK', onPress: () => router.replace(`/contest/${contest!.id}`) },
-      ]);
+      toast.success('Joined!', 'You have successfully joined the match.');
+      router.replace(`/contest/${contest!.id}`);
     } catch (e: any) {
-      Alert.alert('Could not join', e?.message ?? 'Something went wrong.');
+      toast.error('Could not join', e?.message ?? 'Something went wrong.');
     } finally {
       setLoading(false);
     }

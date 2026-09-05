@@ -12,8 +12,10 @@ import { useAuth } from '@/hooks/useAuth';
 import { backend } from '@/services/backend';
 import { Registration } from '@/models/types';
 import { colors, radius, spacing } from '@/constants/theme';
+import { useToast } from '@/components/ui/Toast';
 
 export default function ManageMatch() {
+  const toast = useToast();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
   const { contest } = useContest(id!);
@@ -60,8 +62,8 @@ export default function ManageMatch() {
     setSavingRoom(true);
     try {
       await backend.setRoomCredentials(contest!.id, roomId.trim(), roomPw.trim(), goLive ? 'ongoing' : undefined);
-      Alert.alert('Saved', goLive ? 'Room shared and match is now live.' : 'Room credentials saved.');
-    } catch (e: any) { Alert.alert('Error', e?.message ?? 'Failed'); }
+      toast.success('Saved', goLive ? 'Room shared and match is now live.' : 'Room credentials saved.');
+    } catch (e: any) { toast.error('Error', e?.message ?? 'Failed'); }
     finally { setSavingRoom(false); }
   }
 
@@ -77,8 +79,8 @@ export default function ManageMatch() {
         setDeclaring(true);
         try {
           await backend.declareResults(contest!.id, rows);
-          Alert.alert('Done', 'Results declared and prizes distributed.');
-        } catch (e: any) { Alert.alert('Error', e?.message ?? 'Failed'); }
+          toast.error('Done', 'Results declared and prizes distributed.');
+        } catch (e: any) { toast.error('Error', e?.message ?? 'Failed'); }
         finally { setDeclaring(false); }
       } },
     ]);

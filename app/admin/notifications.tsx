@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import Header from '@/components/ui/Header';
 import Card from '@/components/ui/Card';
 import Input from '@/components/ui/Input';
@@ -8,21 +8,23 @@ import { useNotifications } from '@/hooks/useData';
 import { backend } from '@/services/backend';
 import { colors, spacing } from '@/constants/theme';
 import { relativeTime } from '@/utils/format';
+import { useToast } from '@/components/ui/Toast';
 
 export default function AdminNotifications() {
+  const toast = useToast();
   const items = useNotifications();
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [loading, setLoading] = useState(false);
 
   async function send() {
-    if (!title.trim() || !body.trim()) { Alert.alert('Missing', 'Enter a title and message.'); return; }
+    if (!title.trim() || !body.trim()) { toast.error('Missing', 'Enter a title and message.'); return; }
     setLoading(true);
     try {
       await backend.sendNotification(title.trim(), body.trim());
       setTitle(''); setBody('');
-      Alert.alert('Sent', 'Notification broadcast to all players.');
-    } catch (e: any) { Alert.alert('Error', e?.message ?? 'Failed'); }
+      toast.success('Sent', 'Notification broadcast to all players.');
+    } catch (e: any) { toast.error('Error', e?.message ?? 'Failed'); }
     finally { setLoading(false); }
   }
 

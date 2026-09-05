@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, Linking } from 'react-native';
+import { Linking } from 'react-native';
 import { ImageBackground, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,6 +17,7 @@ import { contestArt } from '@/constants/gameArt';
 import { shareContest } from '@/utils/share';
 import { colors, radius, shadow, spacing } from '@/constants/theme';
 import { countdown, formatSchedule } from '@/utils/format';
+import { useToast } from '@/components/ui/Toast';
 
 function Chip({ label, value }: { label: string; value: string }) {
   return (
@@ -28,6 +29,7 @@ function Chip({ label, value }: { label: string; value: string }) {
 }
 
 export default function ContestDetails() {
+  const toast = useToast();
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { user } = useAuth();
@@ -164,7 +166,7 @@ export default function ContestDetails() {
                   style={{ marginTop: spacing.sm }}
                   onPress={async () => {
                     if (!proof) {
-                      Alert.alert('Screenshot required', 'Attach your match result first.');
+                      toast.error('Screenshot required', 'Attach your match result first.');
                       return;
                     }
                     setSaving(true);
@@ -172,9 +174,9 @@ export default function ContestDetails() {
                       const url = await backend.uploadImage(proof, 'results');
                       await backend.setResultProof(joined.id, url);
                       setProof(null);
-                      Alert.alert('Submitted', 'Your result screenshot was sent to staff.');
+                      toast.success('Submitted', 'Your result screenshot was sent to staff.');
                     } catch (e: any) {
-                      Alert.alert('Error', e?.message ?? 'Could not submit.');
+                      toast.error('Error', e?.message ?? 'Could not submit.');
                     } finally {
                       setSaving(false);
                     }

@@ -9,6 +9,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { backend } from '@/services/backend';
 import { AppUser, Role } from '@/models/types';
 import { colors, radius, spacing } from '@/constants/theme';
+import { useToast } from '@/components/ui/Toast';
 
 const ROLES: Role[] = ['player', 'staff', 'admin'];
 const ROLE_COLOR: Record<Role, string> = {
@@ -16,6 +17,7 @@ const ROLE_COLOR: Record<Role, string> = {
 };
 
 export default function AdminUsers() {
+  const toast = useToast();
   const users = useUsers();
   const { uid } = useAuth();
   const [busy, setBusy] = useState<string | null>(null);
@@ -24,7 +26,7 @@ export default function AdminUsers() {
     const next = ROLES[(ROLES.indexOf(u.role) + 1) % ROLES.length];
     setBusy(u.uid);
     try { await backend.setUserRole(u.uid, next); }
-    catch (e: any) { Alert.alert('Error', e?.message ?? 'Failed'); }
+    catch (e: any) { toast.error('Error', e?.message ?? 'Failed'); }
     finally { setBusy(null); }
   }
 
@@ -38,7 +40,7 @@ export default function AdminUsers() {
           onPress: async () => {
             setBusy(u.uid);
             try { await backend.setUserBanned(u.uid, !u.banned); }
-            catch (e: any) { Alert.alert('Error', e?.message ?? 'Failed'); }
+            catch (e: any) { toast.error('Error', e?.message ?? 'Failed'); }
             finally { setBusy(null); }
           } },
       ]

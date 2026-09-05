@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import Header from '@/components/ui/Header';
 import Card from '@/components/ui/Card';
@@ -11,6 +11,7 @@ import ScreenshotPicker from '@/components/ScreenshotPicker';
 import { DEFAULT_RULES } from '@/constants/rules';
 import { ContestMode, MatchType, PrizeRow } from '@/models/types';
 import { colors, radius, spacing } from '@/constants/theme';
+import { useToast } from '@/components/ui/Toast';
 
 const MODES: ContestMode[] = ['solo', 'duo', 'squad'];
 const SCHEDULES = [
@@ -32,6 +33,7 @@ function Chip({ label, active, onPress }: { label: string; active: boolean; onPr
 }
 
 export default function CreateContest() {
+  const toast = useToast();
   const router = useRouter();
   const { games } = useGames();
   const [gameId, setGameId] = useState('');
@@ -50,8 +52,8 @@ export default function CreateContest() {
   const [loading, setLoading] = useState(false);
 
   async function submit() {
-    if (!gameId) { Alert.alert('Select a game'); return; }
-    if (!title.trim()) { Alert.alert('Enter a title'); return; }
+    if (!gameId) { toast.error('Select a game'); return; }
+    if (!title.trim()) { toast.error('Enter a title'); return; }
     const pool = parseInt(prizePool, 10) || 0;
     setLoading(true);
     try {
@@ -71,8 +73,9 @@ export default function CreateContest() {
         bannerUrl: banner ? await backend.uploadImage(banner, 'contests') : '',
         videoUrl: videoUrl.trim(),
       });
-      Alert.alert('Created', 'Contest published.', [{ text: 'OK', onPress: () => router.back() }]);
-    } catch (e: any) { Alert.alert('Error', e?.message ?? 'Failed'); }
+      toast.success('Created', 'Contest published.');
+      router.back();
+    } catch (e: any) { toast.error('Error', e?.message ?? 'Failed'); }
     finally { setLoading(false); }
   }
 

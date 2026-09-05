@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,12 +13,14 @@ import { backend } from '@/services/backend';
 import { APP, DEPOSIT_BONUS_TIERS, depositBonus } from '@/constants/app';
 import { colors, radius, spacing } from '@/constants/theme';
 import { walletTotal } from '@/models/types';
+import { useToast } from '@/components/ui/Toast';
 
 const QUICK = [20, 50, 100, 200, 500, 1000];
 const MIN = 1;
 const MAX = 1000;
 
 export default function Recharge() {
+  const toast = useToast();
   const router = useRouter();
   const { user } = useAuth();
   const [step, setStep] = useState<1 | 2>(1);
@@ -31,7 +33,7 @@ export default function Recharge() {
 
   function next() {
     if (!value || value < MIN || value > MAX) {
-      Alert.alert('Invalid amount', `Enter an amount between ₹${MIN} and ₹${MAX}.`);
+      toast.error('Invalid amount', `Enter an amount between ₹${MIN} and ₹${MAX}.`);
       return;
     }
     setStep(2);
@@ -39,7 +41,7 @@ export default function Recharge() {
 
   async function copyUpi() {
     await Clipboard.setStringAsync(APP.upiId);
-    Alert.alert('Copied', 'UPI ID copied. Paste it in your payment app.');
+    toast.success('Copied', 'UPI ID copied. Paste it in your payment app.');
   }
 
   /** Hands the payment off to any installed UPI app, pre-filled. */
@@ -51,10 +53,7 @@ export default function Recharge() {
       `&tn=${encodeURIComponent(`${APP.name} recharge`)}`;
     const ok = await Linking.canOpenURL(url).catch(() => false);
     if (!ok) {
-      Alert.alert(
-        'No UPI app found',
-        `Copy the UPI ID and pay ₹${value} manually, then attach the screenshot.`,
-      );
+      toast.error('No UPI app found', `Copy the UPI ID and pay ₹${value} manually, then attach the screenshot.`);
       return;
     }
     Linking.openURL(url);
@@ -62,24 +61,21 @@ export default function Recharge() {
 
   async function submit() {
     if (!proof) {
-      Alert.alert('Screenshot required', 'Attach the payment screenshot so we can verify it.');
+      toast.error('Screenshot required', 'Attach the payment screenshot so we can verify it.');
       return;
     }
     if (utr.trim().length < 6) {
-      Alert.alert('Reference required', 'Enter the UPI reference / UTR number from your payment app.');
+      toast.error('Reference required', 'Enter the UPI reference / UTR number from your payment app.');
       return;
     }
     setLoading(true);
     try {
       const proofUrl = await backend.uploadImage(proof, 'deposits');
       await backend.createDeposit(user!, value, { proofUrl, utr: utr.trim() });
-      Alert.alert(
-        'Request submitted',
-        'Your deposit is pending review. Coins are credited once an admin verifies the payment.',
-        [{ text: 'OK', onPress: () => router.back() }],
-      );
+      toast.success('Request submitted', 'Your deposit is pending review. Coins are credited once an admin verifies the payment.');
+      router.back();
     } catch (e: any) {
-      Alert.alert('Error', e?.message ?? 'Could not submit the request.');
+      toast.error('Error', e?.message ?? 'Could not submit the request.');
     } finally {
       setLoading(false);
     }

@@ -4,10 +4,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
-import { Alert } from 'react-native';
 import { shareReferral } from '@/utils/share';
 import { useAuth } from '@/hooks/useAuth';
 import { colors, radius, shadow, spacing } from '@/constants/theme';
+import { useToast } from '@/components/ui/Toast';
 
 const SOCIALS = [
   { key: 'telegram', label: 'Telegram', icon: 'paper-plane', color: '#37AEE2' },
@@ -16,13 +16,14 @@ const SOCIALS = [
 ] as const;
 
 export default function Earn() {
+  const toast = useToast();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const code = user?.referralCode ?? '';
 
   async function copy() {
     await Clipboard.setStringAsync(code);
-    Alert.alert('Copied', 'Referral code copied to clipboard.');
+    toast.success('Copied', 'Referral code copied to clipboard.');
   }
 
   const share = () => shareReferral(code);

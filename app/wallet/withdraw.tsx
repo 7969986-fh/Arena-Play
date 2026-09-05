@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import Header from '@/components/ui/Header';
 import Card from '@/components/ui/Card';
@@ -8,10 +8,12 @@ import Input from '@/components/ui/Input';
 import { useAuth } from '@/hooks/useAuth';
 import { backend } from '@/services/backend';
 import { colors, spacing } from '@/constants/theme';
+import { useToast } from '@/components/ui/Toast';
 
 const MIN = 50;
 
 export default function Withdraw() {
+  const toast = useToast();
   const router = useRouter();
   const { user } = useAuth();
   const [amount, setAmount] = useState('');
@@ -21,17 +23,16 @@ export default function Withdraw() {
 
   async function onWithdraw() {
     const n = parseInt(amount, 10);
-    if (!n || n < MIN) { Alert.alert('Invalid amount', `Minimum withdrawal is ₹${MIN}.`); return; }
-    if (n > winnings) { Alert.alert('Low balance', 'You can only withdraw from your winnings balance.'); return; }
-    if (!upi.trim()) { Alert.alert('UPI required', 'Enter your UPI ID to receive the payout.'); return; }
+    if (!n || n < MIN) { toast.error('Invalid amount', `Minimum withdrawal is ₹${MIN}.`); return; }
+    if (n > winnings) { toast.error('Low balance', 'You can only withdraw from your winnings balance.'); return; }
+    if (!upi.trim()) { toast.error('UPI required', 'Enter your UPI ID to receive the payout.'); return; }
     setLoading(true);
     try {
       await backend.createWithdrawal(user!, n, upi.trim());
-      Alert.alert('Withdrawal requested', 'Your request is pending admin approval.', [
-        { text: 'OK', onPress: () => router.back() },
-      ]);
+      toast.success('Withdrawal requested', 'Your request is pending admin approval.');
+      router.back();
     } catch (e: any) {
-      Alert.alert('Error', e?.message ?? 'Could not request withdrawal.');
+      toast.error('Error', e?.message ?? 'Could not request withdrawal.');
     } finally {
       setLoading(false);
     }

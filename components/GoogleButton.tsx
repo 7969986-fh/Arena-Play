@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/hooks/useAuth';
 import { colors, radius, shadow } from '@/constants/theme';
+import { useToast } from '@/components/ui/Toast';
 
 /**
  * Renders nothing unless Google sign-in is actually enabled on the project,
@@ -10,6 +11,7 @@ import { colors, radius, shadow } from '@/constants/theme';
  * on its own once the provider is switched on — no app update needed.
  */
 export default function GoogleButton({ label = 'Continue with Google' }: { label?: string }) {
+  const toast = useToast();
   const { signInWithGoogle, googleAvailable } = useAuth();
   const [busy, setBusy] = useState(false);
 
@@ -24,7 +26,7 @@ export default function GoogleButton({ label = 'Continue with Google' }: { label
     } catch (e: any) {
       // Closing the browser tab is a normal action, not a failure to report.
       if (e?.message !== 'CANCELLED') {
-        Alert.alert('Google sign-in failed', e?.message ?? 'Please try again.');
+        toast.error('Google sign-in failed', e?.message ?? 'Please try again.');
       }
     } finally {
       setBusy(false);

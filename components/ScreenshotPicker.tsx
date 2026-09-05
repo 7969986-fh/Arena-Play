@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, radius } from '@/constants/theme';
+import { useToast } from '@/components/ui/Toast';
 
 interface Props {
   /** Currently chosen local image URI, or null when nothing is picked yet. */
@@ -17,6 +18,7 @@ interface Props {
  * Used for both UPI payment proof and match result proof.
  */
 export default function ScreenshotPicker({ value, onChange, label = 'Upload screenshot', hint }: Props) {
+  const toast = useToast();
   const [busy, setBusy] = useState(false);
 
   async function pick() {
@@ -24,10 +26,7 @@ export default function ScreenshotPicker({ value, onChange, label = 'Upload scre
     try {
       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!perm.granted) {
-        Alert.alert(
-          'Permission needed',
-          'Allow photo access so you can attach a screenshot.',
-        );
+        toast.error('Permission needed', 'Allow photo access so you can attach a screenshot.');
         return;
       }
       const res = await ImagePicker.launchImageLibraryAsync({
