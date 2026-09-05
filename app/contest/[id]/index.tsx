@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Alert } from 'react-native';
 import { ImageBackground, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,6 +8,8 @@ import Header from '@/components/ui/Header';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Coin from '@/components/ui/Coin';
+import ScreenshotPicker from '@/components/ScreenshotPicker';
+import { backend } from '@/services/backend';
 import { useContest, useUserRegistrations } from '@/hooks/useData';
 import { useAuth } from '@/hooks/useAuth';
 import { gameArt } from '@/constants/gameArt';
@@ -30,6 +33,8 @@ export default function ContestDetails() {
   const { contest, loading } = useContest(id!);
   const regs = useUserRegistrations(user?.uid ?? null);
   const [, tick] = useState(0);
+  const [proof, setProof] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     const t = setInterval(() => tick((n) => n + 1), 1000);
@@ -129,6 +134,51 @@ export default function ContestDetails() {
           </Card>
         )}
 
+        {joined && contest.status !== 'upcoming' && (
+          <Card style={{ marginTop: spacing.md }}>
+            <Text style={styles.roomTitle}>📸 Your Result</Text>
+            {joined.proofUrl ? (
+              <>
+                <Text style={styles.proofOk}>Screenshot submitted ✓</Text>
+                <Text style={styles.proofHint}>
+                  Staff will verify it when declaring results.
+                </Text>
+              </>
+            ) : (
+              <>
+                <ScreenshotPicker
+                  value={proof}
+                  onChange={setProof}
+                  label=""
+                  hint="Your end-of-match screen showing kills and rank"
+                />
+                <Button
+                  label="Submit result"
+                  loading={saving}
+                  style={{ marginTop: spacing.sm }}
+                  onPress={async () => {
+                    if (!proof) {
+                      Alert.alert('Screenshot required', 'Attach your match result first.');
+                      return;
+                    }
+                    setSaving(true);
+                    try {
+                      const url = await backend.uploadImage(proof, 'results');
+                      await backend.setResultProof(joined.id, url);
+                      setProof(null);
+                      Alert.alert('Submitted', 'Your result screenshot was sent to staff.');
+                    } catch (e: any) {
+                      Alert.alert('Error', e?.message ?? 'Could not submit.');
+                    } finally {
+                      setSaving(false);
+                    }
+                  }}
+                />
+              </>
+            )}
+          </Card>
+        )}
+
         <Text style={styles.sectionTitle}>Prize Details</Text>
         <Card>
           {contest.prizeBreakdown.map((p, i) => (
@@ -193,5 +243,7 @@ const styles = StyleSheet.create({
   roomValue: { fontSize: 16, fontWeight: '900', color: '#7A5200', letterSpacing: 1 },
   sectionTitle: { fontSize: 17, fontWeight: '900', color: colors.text, marginTop: spacing.lg, marginBottom: 10 },
   rankLabel: { fontSize: 14, fontWeight: '800', color: colors.text },
+  proofOk: { fontSize: 14, fontWeight: '800', color: colors.primary },
+  proofHint: { fontSize: 11.5, color: colors.textMuted, fontWeight: '600', marginTop: 4 },
   rules: { fontSize: 14, color: colors.textMuted, lineHeight: 20, fontWeight: '500' },
 });

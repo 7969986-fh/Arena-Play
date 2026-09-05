@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
 import Header from '@/components/ui/Header';
@@ -20,6 +20,8 @@ export default function ManageMatch() {
   const regs = useContestRegistrations(id!);
   const [roomId, setRoomId] = useState('');
   const [roomPw, setRoomPw] = useState('');
+  // Result screenshot opened fullscreen while verifying a player's row.
+  const [zoom, setZoom] = useState<string | null>(null);
   const [results, setResults] = useState<Record<string, { kills: string; placement: string }>>({});
   const [savingRoom, setSavingRoom] = useState(false);
   const [declaring, setDeclaring] = useState(false);
@@ -131,6 +133,14 @@ export default function ManageMatch() {
                     <Text style={styles.ign}>{r.inGameName}</Text>
                     <Text style={styles.sub}>Slot {r.slotNumber} • {r.username}</Text>
                     {resulted && <Text style={styles.won}>Won ₹{r.wonAmount} • {r.kills}k / #{r.placement}</Text>}
+                    {r.proofUrl ? (
+                      <Pressable onPress={() => setZoom(r.proofUrl!)} style={styles.proofChip}>
+                        <Ionicons name="image-outline" size={12} color={colors.primaryDark} />
+                        <Text style={styles.proofChipTxt}>View result proof</Text>
+                      </Pressable>
+                    ) : (
+                      <Text style={styles.noProof}>No proof uploaded</Text>
+                    )}
                   </View>
                   {!resulted && (
                     <>
@@ -173,6 +183,12 @@ export default function ManageMatch() {
           </>
         )}
       </ScrollView>
+
+      <Modal visible={!!zoom} transparent animationType="fade" onRequestClose={() => setZoom(null)}>
+        <Pressable style={styles.zoomBg} onPress={() => setZoom(null)}>
+          {zoom ? <Image source={{ uri: zoom }} style={styles.zoomImg} resizeMode="contain" /> : null}
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -189,6 +205,15 @@ const styles = StyleSheet.create({
   tableHead: { flexDirection: 'row', paddingHorizontal: 8, marginBottom: 8 },
   th: { fontSize: 12, fontWeight: '900', color: colors.textMuted },
   numCol: { width: 56, textAlign: 'center' },
+  proofChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6,
+    alignSelf: 'flex-start', backgroundColor: colors.mint,
+    paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999,
+  },
+  proofChipTxt: { fontSize: 10.5, fontWeight: '800', color: colors.primaryDark },
+  noProof: { fontSize: 10.5, fontWeight: '700', color: colors.textMuted, marginTop: 6 },
+  zoomBg: { flex: 1, backgroundColor: 'rgba(0,0,0,0.92)', alignItems: 'center', justifyContent: 'center' },
+  zoomImg: { width: '100%', height: '85%' },
   regCard: { marginBottom: 10 },
   regRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   ign: { fontSize: 15, fontWeight: '800', color: colors.text },
