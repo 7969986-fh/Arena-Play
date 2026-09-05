@@ -10,6 +10,7 @@ import { useLeaderboard } from '@/hooks/useData';
 import { useAuth } from '@/hooks/useAuth';
 import { colors, gradients, radius, shadow, spacing } from '@/constants/theme';
 import { ListSkeleton } from '@/components/ui/Skeleton';
+import { rankOf } from '@/constants/progression';
 
 const PERIODS = [
   { key: 'weekly', label: 'Weekly' },
@@ -49,9 +50,17 @@ export default function Leaderboard() {
                   <View style={[styles.rank, i < 3 && { backgroundColor: MEDAL[i] }]}>
                     <Text style={[styles.rankTxt, i < 3 && { color: '#fff' }]}>{i + 1}</Text>
                   </View>
-                  <Text style={styles.name} numberOfLines={1}>
-                    {u.username}{mine ? ' (You)' : ''}
-                  </Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.name} numberOfLines={1}>
+                      {u.username}{mine ? ' (You)' : ''}
+                    </Text>
+                    <View style={styles.rankRow}>
+                      <View style={[styles.tier, { backgroundColor: rankOf(u.stats).colour }]}>
+                        <Text style={styles.tierTxt}>Lv {rankOf(u.stats).level}</Text>
+                      </View>
+                      <Text style={styles.tierName}>{rankOf(u.stats).title}</Text>
+                    </View>
+                  </View>
                   <Coin amount={u.stats.earnings} size={15} />
                 </View>
               </Animated.View>
@@ -64,6 +73,10 @@ export default function Leaderboard() {
 }
 
 const styles = StyleSheet.create({
+  rankRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 },
+  tier: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 999 },
+  tierTxt: { fontSize: 9.5, fontWeight: '900', color: '#fff' },
+  tierName: { fontSize: 10.5, fontWeight: '700', color: colors.textMuted },
   bg: { flex: 1, backgroundColor: colors.bg },
   header: {
     paddingBottom: 18, paddingHorizontal: 16,
@@ -82,5 +95,5 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   rankTxt: { fontSize: 15, fontWeight: '900', color: colors.text },
-  name: { flex: 1, fontSize: 15, fontWeight: '800', color: colors.text },
+  name: { fontSize: 15, fontWeight: '800', color: colors.text },
 });
