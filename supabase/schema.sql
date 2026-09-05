@@ -273,21 +273,46 @@ exception
     raise exception 'That slot was just taken. Pick another.';
 end $$;
 
--- Admin approves a deposit: credits the deposit wallet exactly once.
+-- Bonus coins earned on a deposit. Mirrors DEPOSIT_BONUS_TIERS in
+-- constants/app.ts — change both together.
+create or replace function public.deposit_bonus(amount int)
+returns int language sql immutable as $$
+  select case
+    when amount >= 500 then 100
+    when amount >= 300 then 60
+    when amount >= 200 then 35
+    when amount >= 100 then 15
+    when amount >= 50  then 5
+    else 0
+  end;
+$$;
+
+-- Admin approves a deposit: credits the deposit wallet exactly once, plus
+-- any tier bonus into the bonus wallet (spendable on entry fees, never
+-- withdrawable).
 create or replace function public.approve_deposit(p_id uuid)
 returns void language plpgsql security definer set search_path = public as $$
-declare d record;
+declare d record; b int;
 begin
   if not public.is_admin() then raise exception 'Admins only.'; end if;
   select * into d from public.deposits where id = p_id for update;
   if d is null then raise exception 'Request not found.'; end if;
   if d.status <> 'pending' then raise exception 'Already processed.'; end if;
 
+  b := public.deposit_bonus(d.amount);
+
   update public.deposits set status = 'approved' where id = p_id;
   update public.users
-     set wallet = jsonb_set(wallet, '{deposit}', to_jsonb((wallet->>'deposit')::int + d.amount))
+     set wallet = jsonb_set(
+                    jsonb_set(wallet, '{deposit}', to_jsonb((wallet->>'deposit')::int + d.amount)),
+                    '{bonus}', to_jsonb((wallet->>'bonus')::int + b))
    where uid = d.user_id;
+
   perform public.log_txn(d.user_id, 'credit', d.amount, 'deposit', 'Deposit approved');
+  if b > 0 then
+    perform public.log_txn(d.user_id, 'credit', b, 'bonus',
+      'Deposit bonus (₹' || d.amount || ' tier)');
+  end if;
 end $$;
 
 create or replace function public.reject_deposit(p_id uuid)

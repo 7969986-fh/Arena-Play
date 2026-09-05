@@ -11,6 +11,7 @@ import {
 import { SEED_GAMES } from '@/constants/games';
 import { computeWinnings } from '@/constants/scoring';
 import { buildSampleContests } from '@/services/sampleData';
+import { depositBonus } from '@/constants/app';
 import { Backend, ContestInput, JoinInput, ResultRow, Unsub, DepositProof } from '@/services/backendTypes';
 
 /**
@@ -338,10 +339,16 @@ class LocalBackend implements Backend {
     await this.ready;
     const u = this.get<AppUser[]>('users').find((x) => x.uid === req.userId);
     if (!u) throw new Error('User not found.');
+    const bonus = depositBonus(req.amount);
     u.wallet.deposit += req.amount;
+    u.wallet.bonus += bonus;
     await this.saveUser(u);
-    await this.addTransaction(u.uid, 'credit', req.amount, 'deposit',
-      'Deposit approved', u.wallet.deposit + u.wallet.winnings + u.wallet.bonus);
+    const total = () => u.wallet.deposit + u.wallet.winnings + u.wallet.bonus;
+    await this.addTransaction(u.uid, 'credit', req.amount, 'deposit', 'Deposit approved', total());
+    if (bonus > 0) {
+      await this.addTransaction(u.uid, 'credit', bonus, 'bonus',
+        `Deposit bonus (₹${req.amount} tier)`, total());
+    }
     await this.setRequestStatus('deposits', req.id, 'approved');
   }
 

@@ -10,7 +10,7 @@ import Input from '@/components/ui/Input';
 import ScreenshotPicker from '@/components/ScreenshotPicker';
 import { useAuth } from '@/hooks/useAuth';
 import { backend } from '@/services/backend';
-import { APP } from '@/constants/app';
+import { APP, DEPOSIT_BONUS_TIERS, depositBonus } from '@/constants/app';
 import { colors, radius, spacing } from '@/constants/theme';
 import { walletTotal } from '@/models/types';
 
@@ -113,14 +113,39 @@ export default function Recharge() {
             </View>
 
             <View style={styles.quickGrid}>
-              {QUICK.map((q) => (
-                <Pressable key={q} style={styles.quick} onPress={() => setAmount(String(q))}>
-                  <Text style={styles.quickTxt}>₹{q}</Text>
-                </Pressable>
-              ))}
+              {QUICK.map((q) => {
+                const b = depositBonus(q);
+                return (
+                  <Pressable key={q} style={styles.quick} onPress={() => setAmount(String(q))}>
+                    <Text style={styles.quickTxt}>₹{q}</Text>
+                    {b > 0 && <Text style={styles.quickBonus}>+{b} bonus</Text>}
+                  </Pressable>
+                );
+              })}
             </View>
 
+            {value > 0 && depositBonus(value) > 0 && (
+              <View style={styles.earnRow}>
+                <Ionicons name="gift" size={16} color={colors.primaryDark} />
+                <Text style={styles.earnTxt}>
+                  You get {value + depositBonus(value)} coins — ₹{value} + {depositBonus(value)} bonus
+                </Text>
+              </View>
+            )}
+
             <Button label="Continue" onPress={next} style={{ marginTop: spacing.md }} />
+
+            <Text style={styles.tierHead}>Bonus on every deposit</Text>
+            {DEPOSIT_BONUS_TIERS.map((t) => (
+              <View key={t.min} style={styles.tierRow}>
+                <Text style={styles.tierLeft}>Add ₹{t.min} or more</Text>
+                <Text style={styles.tierRight}>+{t.bonus} bonus coins</Text>
+              </View>
+            ))}
+            <Text style={styles.tierNote}>
+              Bonus coins can be spent on entry fees but cannot be withdrawn.
+              Only winnings are withdrawable.
+            </Text>
           </Card>
         ) : (
           <>
@@ -197,6 +222,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   quickTxt: { fontSize: 15, fontWeight: '800', color: colors.primaryDark },
+  quickBonus: { fontSize: 9.5, fontWeight: '800', color: colors.primary, marginTop: 1 },
+  earnRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: spacing.md,
+    backgroundColor: colors.mint, borderRadius: radius.md, padding: 12,
+  },
+  earnTxt: { flex: 1, fontSize: 12.5, fontWeight: '800', color: colors.primaryDark },
+  tierHead: { fontSize: 13, fontWeight: '900', color: colors.text, marginTop: spacing.lg, marginBottom: 8 },
+  tierRow: {
+    flexDirection: 'row', justifyContent: 'space-between',
+    paddingVertical: 7, borderBottomWidth: 1, borderBottomColor: colors.border,
+  },
+  tierLeft: { fontSize: 12.5, fontWeight: '600', color: colors.textMuted },
+  tierRight: { fontSize: 12.5, fontWeight: '800', color: colors.primary },
+  tierNote: { fontSize: 11, color: colors.textMuted, fontWeight: '600', marginTop: 10, lineHeight: 16 },
   upiLabel: { fontSize: 13, fontWeight: '800', color: colors.text, marginBottom: 8 },
   upiBox: {
     flexDirection: 'row',
