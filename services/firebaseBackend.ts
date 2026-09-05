@@ -26,7 +26,7 @@ import {
 import { SEED_GAMES } from '@/constants/games';
 import { computeWinnings } from '@/constants/scoring';
 import { buildSampleContests } from '@/services/sampleData';
-import { Backend, ContestInput, JoinInput, ResultRow, Unsub } from '@/services/backendTypes';
+import { Backend, ContestInput, JoinInput, ResultRow, Unsub, DepositProof } from '@/services/backendTypes';
 
 const now = () => Date.now();
 
@@ -153,15 +153,17 @@ class FirebaseBackend implements Backend {
       (s) => cb(docsTo<Transaction>(s)));
   }
 
-  async createDeposit(user: AppUser, amount: number) {
+  async createDeposit(user: AppUser, amount: number, proof?: DepositProof) {
     await addDoc(collection(db, 'deposits'), {
       userId: user.uid, username: user.username, amount, status: 'pending', createdAt: now(),
+      proofUrl: proof?.proofUrl ?? '', utr: proof?.utr ?? '',
     } as Omit<MoneyRequest, 'id'>);
   }
 
-  async createWithdrawal(user: AppUser, amount: number) {
+  async createWithdrawal(user: AppUser, amount: number, payoutUpi?: string) {
     await addDoc(collection(db, 'withdrawals'), {
       userId: user.uid, username: user.username, amount, status: 'pending', createdAt: now(),
+      payoutUpi: payoutUpi ?? '',
     } as Omit<MoneyRequest, 'id'>);
   }
 
@@ -319,6 +321,12 @@ class FirebaseBackend implements Backend {
         description: 'Registration removed — refund', balanceAfter: 0, createdAt: now(),
       } as Omit<Transaction, 'id'>);
     }
+  }
+
+  async uploadImage(localUri: string) {
+    // Firebase Storage is not wired up in this build; the device URI is
+    // kept so the flow still works for a single-device demo.
+    return localUri;
   }
 
   async seed() {

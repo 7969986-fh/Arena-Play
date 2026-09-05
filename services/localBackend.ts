@@ -11,7 +11,7 @@ import {
 import { SEED_GAMES } from '@/constants/games';
 import { computeWinnings } from '@/constants/scoring';
 import { buildSampleContests } from '@/services/sampleData';
-import { Backend, ContestInput, JoinInput, ResultRow, Unsub } from '@/services/backendTypes';
+import { Backend, ContestInput, JoinInput, ResultRow, Unsub, DepositProof } from '@/services/backendTypes';
 
 /**
  * Local, offline backend backed by AsyncStorage.
@@ -279,22 +279,23 @@ class LocalBackend implements Backend {
         .sort((a, b) => b.createdAt - a.createdAt), cb);
   }
 
-  async createDeposit(user: AppUser, amount: number) {
+  async createDeposit(user: AppUser, amount: number, proof?: DepositProof) {
     await this.ready;
     this.get<MoneyRequest[]>('deposits').push({
       id: uid(), userId: user.uid, username: user.username, amount,
       status: 'pending', createdAt: now(),
+      proofUrl: proof?.proofUrl, utr: proof?.utr,
     });
     await this.persist('deposits');
   }
 
-  async createWithdrawal(user: AppUser, amount: number) {
+  async createWithdrawal(user: AppUser, amount: number, payoutUpi?: string) {
     await this.ready;
     const u = this.get<AppUser[]>('users').find((x) => x.uid === user.uid)!;
     if (u.wallet.winnings < amount) throw new Error('Withdrawable (winnings) balance too low.');
     this.get<MoneyRequest[]>('withdrawals').push({
       id: uid(), userId: user.uid, username: user.username, amount,
-      status: 'pending', createdAt: now(),
+      status: 'pending', createdAt: now(), payoutUpi,
     });
     u.wallet.winnings -= amount;
     await this.saveUser(u);
@@ -495,6 +496,12 @@ class LocalBackend implements Backend {
     });
     await this.persist('creds');
     await this.persist('users');
+  }
+
+  async uploadImage(localUri: string) {
+    // Offline mode renders straight from the device file, so there is
+    // nothing to upload — the caller just gets the URI back.
+    return localUri;
   }
 
   async seed() {

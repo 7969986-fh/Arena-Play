@@ -9,7 +9,7 @@ export const APP = {
   downloadUrl: 'https://github.com/7969986-fh/Arena-Play/releases/latest',
 
   /** UPI ID players send deposits to. Shown on the recharge screen. */
-  upiId: 'yourname@upi',
+  upiId: 'yashofficial@fam',
   /** Name shown next to the UPI ID so players know the payment is right. */
   upiName: 'Arena Play',
 

@@ -102,6 +102,12 @@ export interface MoneyRequest {
   amount: number;
   status: RequestStatus;
   note?: string;
+  /** Deposits: screenshot of the UPI payment, for the admin to verify. */
+  proofUrl?: string;
+  /** Deposits: UPI reference / UTR number the player pasted in. */
+  utr?: string;
+  /** Withdrawals: the UPI ID the player wants to be paid on. */
+  payoutUpi?: string;
   createdAt: number;
 }
 

@@ -1,13 +1,18 @@
 import React, { useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import * as Clipboard from 'expo-clipboard';
+import { Ionicons } from '@expo/vector-icons';
 import Header from '@/components/ui/Header';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
+import ScreenshotPicker from '@/components/ScreenshotPicker';
 import { useAuth } from '@/hooks/useAuth';
 import { backend } from '@/services/backend';
+import { APP } from '@/constants/app';
 import { colors, radius, spacing } from '@/constants/theme';
+import { walletTotal } from '@/models/types';
 
 const QUICK = [20, 50, 100, 200, 500, 1000];
 const MIN = 1;
@@ -16,25 +21,65 @@ const MAX = 1000;
 export default function Recharge() {
   const router = useRouter();
   const { user } = useAuth();
+  const [step, setStep] = useState<1 | 2>(1);
   const [amount, setAmount] = useState('');
+  const [utr, setUtr] = useState('');
+  const [proof, setProof] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  async function onRecharge() {
-    const n = parseInt(amount, 10);
-    if (!n || n < MIN || n > MAX) {
+  const value = parseInt(amount, 10);
+
+  function next() {
+    if (!value || value < MIN || value > MAX) {
       Alert.alert('Invalid amount', `Enter an amount between ₹${MIN} and ₹${MAX}.`);
+      return;
+    }
+    setStep(2);
+  }
+
+  async function copyUpi() {
+    await Clipboard.setStringAsync(APP.upiId);
+    Alert.alert('Copied', 'UPI ID copied. Paste it in your payment app.');
+  }
+
+  /** Hands the payment off to any installed UPI app, pre-filled. */
+  async function payNow() {
+    const url =
+      `upi://pay?pa=${encodeURIComponent(APP.upiId)}` +
+      `&pn=${encodeURIComponent(APP.upiName)}` +
+      `&am=${value}&cu=INR` +
+      `&tn=${encodeURIComponent(`${APP.name} recharge`)}`;
+    const ok = await Linking.canOpenURL(url).catch(() => false);
+    if (!ok) {
+      Alert.alert(
+        'No UPI app found',
+        `Copy the UPI ID and pay ₹${value} manually, then attach the screenshot.`,
+      );
+      return;
+    }
+    Linking.openURL(url);
+  }
+
+  async function submit() {
+    if (!proof) {
+      Alert.alert('Screenshot required', 'Attach the payment screenshot so we can verify it.');
+      return;
+    }
+    if (utr.trim().length < 6) {
+      Alert.alert('Reference required', 'Enter the UPI reference / UTR number from your payment app.');
       return;
     }
     setLoading(true);
     try {
-      await backend.createDeposit(user!, n);
+      const proofUrl = await backend.uploadImage(proof, 'deposits');
+      await backend.createDeposit(user!, value, { proofUrl, utr: utr.trim() });
       Alert.alert(
-        'Recharge submitted',
-        'Your deposit request is pending admin approval. Coins are added once approved.',
-        [{ text: 'OK', onPress: () => router.back() }]
+        'Request submitted',
+        'Your deposit is pending review. Coins are credited once an admin verifies the payment.',
+        [{ text: 'OK', onPress: () => router.back() }],
       );
     } catch (e: any) {
-      Alert.alert('Error', e?.message ?? 'Could not process recharge.');
+      Alert.alert('Error', e?.message ?? 'Could not submit the request.');
     } finally {
       setLoading(false);
     }
@@ -43,36 +88,91 @@ export default function Recharge() {
   return (
     <View style={styles.bg}>
       <Header title="Recharge" />
-      <ScrollView contentContainerStyle={{ padding: spacing.lg }} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={{ padding: spacing.lg, paddingBottom: 40 }}
+        keyboardShouldPersistTaps="handled"
+      >
         <Card style={styles.balCard}>
           <Text style={styles.balLabel}>Total Balance</Text>
-          <Text style={styles.bal}>₹ {(user?.wallet.deposit ?? 0) + (user?.wallet.winnings ?? 0) + (user?.wallet.bonus ?? 0)}</Text>
+          <Text style={styles.bal}>₹ {walletTotal(user?.wallet)}</Text>
         </Card>
 
-        <Card style={{ marginTop: spacing.md }}>
-          <Text style={styles.label}>Amount</Text>
-          <Input
-            placeholder={`₹ ${MIN} ~ ${MAX}`}
-            keyboardType="number-pad"
-            value={amount}
-            onChangeText={setAmount}
-            containerStyle={{ marginBottom: 4 }}
-          />
-          <View style={styles.minmax}>
-            <Text style={styles.minmaxTxt}>Minimum: ₹{MIN}</Text>
-            <Text style={styles.minmaxTxt}>Maximum: ₹{MAX}</Text>
-          </View>
+        {step === 1 ? (
+          <Card style={{ marginTop: spacing.md }}>
+            <Text style={styles.h}>How much?</Text>
+            <Input
+              placeholder={`₹ ${MIN} ~ ${MAX}`}
+              keyboardType="number-pad"
+              value={amount}
+              onChangeText={setAmount}
+              containerStyle={{ marginBottom: 4 }}
+            />
+            <View style={styles.minmax}>
+              <Text style={styles.minmaxTxt}>Minimum: ₹{MIN}</Text>
+              <Text style={styles.minmaxTxt}>Maximum: ₹{MAX}</Text>
+            </View>
 
-          <View style={styles.quickGrid}>
-            {QUICK.map((q) => (
-              <Pressable key={q} style={styles.quick} onPress={() => setAmount(String(q))}>
-                <Text style={styles.quickTxt}>₹{q}</Text>
+            <View style={styles.quickGrid}>
+              {QUICK.map((q) => (
+                <Pressable key={q} style={styles.quick} onPress={() => setAmount(String(q))}>
+                  <Text style={styles.quickTxt}>₹{q}</Text>
+                </Pressable>
+              ))}
+            </View>
+
+            <Button label="Continue" onPress={next} style={{ marginTop: spacing.md }} />
+          </Card>
+        ) : (
+          <>
+            <Card style={{ marginTop: spacing.md }}>
+              <View style={styles.amtRow}>
+                <Text style={styles.h}>Pay ₹{value}</Text>
+                <Pressable onPress={() => setStep(1)} hitSlop={10}>
+                  <Text style={styles.edit}>Change</Text>
+                </Pressable>
+              </View>
+
+              <Text style={styles.upiLabel}>Send to this UPI ID</Text>
+              <Pressable style={styles.upiBox} onPress={copyUpi}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.upiId}>{APP.upiId}</Text>
+                  <Text style={styles.upiName}>{APP.upiName}</Text>
+                </View>
+                <Ionicons name="copy-outline" size={20} color={colors.primary} />
               </Pressable>
-            ))}
-          </View>
 
-          <Button label="Recharge" onPress={onRecharge} loading={loading} style={{ marginTop: spacing.md }} />
-        </Card>
+              <Button label={`Open UPI app · ₹${value}`} onPress={payNow} style={{ marginTop: spacing.md }} />
+              <Text style={styles.note}>
+                Already paid from another app? Just attach the screenshot below.
+              </Text>
+            </Card>
+
+            <Card style={{ marginTop: spacing.md }}>
+              <Text style={styles.h}>Proof of payment</Text>
+              <ScreenshotPicker
+                value={proof}
+                onChange={setProof}
+                label="Payment screenshot"
+                hint="The success screen from your UPI app"
+              />
+              <Text style={[styles.upiLabel, { marginTop: spacing.md }]}>
+                UPI reference / UTR number
+              </Text>
+              <Input
+                placeholder="e.g. 402912345678"
+                keyboardType="number-pad"
+                value={utr}
+                onChangeText={setUtr}
+              />
+              <Button
+                label="Submit for approval"
+                onPress={submit}
+                loading={loading}
+                style={{ marginTop: spacing.sm }}
+              />
+            </Card>
+          </>
+        )}
       </ScrollView>
     </View>
   );
@@ -83,13 +183,35 @@ const styles = StyleSheet.create({
   balCard: { alignItems: 'center', backgroundColor: colors.mint },
   balLabel: { fontSize: 13, color: colors.primaryDark, fontWeight: '700' },
   bal: { fontSize: 30, fontWeight: '900', color: colors.primaryDark, marginTop: 2 },
-  label: { fontSize: 22, fontWeight: '900', color: colors.text, marginBottom: 8 },
+  h: { fontSize: 19, fontWeight: '900', color: colors.text, marginBottom: 10 },
+  amtRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  edit: { fontSize: 13, fontWeight: '800', color: colors.primary, marginBottom: 10 },
   minmax: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.md },
   minmaxTxt: { fontSize: 12, color: colors.textMuted, fontWeight: '600' },
   quickGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'space-between' },
   quick: {
-    width: '31%', backgroundColor: colors.mint, borderRadius: radius.md,
-    paddingVertical: 14, alignItems: 'center',
+    width: '31%',
+    backgroundColor: colors.mint,
+    borderRadius: radius.md,
+    paddingVertical: 14,
+    alignItems: 'center',
   },
   quickTxt: { fontSize: 15, fontWeight: '800', color: colors.primaryDark },
+  upiLabel: { fontSize: 13, fontWeight: '800', color: colors.text, marginBottom: 8 },
+  upiBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.mint,
+    borderRadius: radius.md,
+    padding: 14,
+  },
+  upiId: { fontSize: 16, fontWeight: '900', color: colors.primaryDark, letterSpacing: 0.3 },
+  upiName: { fontSize: 11.5, color: colors.textMuted, fontWeight: '600', marginTop: 2 },
+  note: {
+    fontSize: 11.5,
+    color: colors.textMuted,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginTop: 10,
+  },
 });

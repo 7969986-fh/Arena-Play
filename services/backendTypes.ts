@@ -33,6 +33,12 @@ export interface ContestInput {
   rules?: string;
 }
 
+/** Extra evidence a player attaches to a manual UPI deposit. */
+export interface DepositProof {
+  proofUrl?: string;
+  utr?: string;
+}
+
 export interface ResultRow {
   registrationId: string;
   kills: number;
@@ -64,8 +70,8 @@ export interface Backend {
 
   // Wallet
   watchTransactions(uid: string, cb: (t: Transaction[]) => void): Unsub;
-  createDeposit(user: AppUser, amount: number): Promise<void>;
-  createWithdrawal(user: AppUser, amount: number): Promise<void>;
+  createDeposit(user: AppUser, amount: number, proof?: DepositProof): Promise<void>;
+  createWithdrawal(user: AppUser, amount: number, payoutUpi?: string): Promise<void>;
 
   // Leaderboard / misc
   watchLeaderboard(cb: (u: AppUser[]) => void): Unsub;
@@ -97,6 +103,13 @@ export interface Backend {
   setRoomCredentials(contestId: string, roomId: string, roomPassword: string, status?: Contest['status']): Promise<void>;
   declareResults(contestId: string, results: ResultRow[]): Promise<void>;
   removeRegistration(reg: Registration): Promise<void>;
+
+  /**
+   * Stores a local image and returns a URL the app can render later.
+   * The local backend keeps the on-device URI as-is; a cloud backend
+   * uploads the file and returns its public URL.
+   */
+  uploadImage(localUri: string, folder: 'deposits' | 'results'): Promise<string>;
 
   // Setup
   seed(): Promise<void>;
