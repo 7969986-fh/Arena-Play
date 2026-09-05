@@ -6,6 +6,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import HomeHeader from '@/components/HomeHeader';
 import GameCard from '@/components/GameCard';
 import PromoCarousel from '@/components/PromoCarousel';
+import { GameGridSkeleton } from '@/components/ui/Skeleton';
 import { useAuth } from '@/hooks/useAuth';
 import { useGames } from '@/hooks/useData';
 import { colors, radius, shadow, spacing } from '@/constants/theme';
@@ -18,7 +19,7 @@ const MATCH_TILES = [
 
 export default function Home() {
   const { user } = useAuth();
-  const { games } = useGames();
+  const { games, loading: gamesLoading } = useGames();
   const router = useRouter();
 
   return (
@@ -52,6 +53,9 @@ export default function Home() {
 
         {/* Esports Games */}
         <Text style={styles.section}>Esports Games</Text>
+        {gamesLoading ? (
+          <GameGridSkeleton />
+        ) : (
         <View style={styles.grid}>
           {games.map((g, i) => (
             <Animated.View
@@ -63,6 +67,7 @@ export default function Home() {
             </Animated.View>
           ))}
         </View>
+        )}
       </ScrollView>
     </View>
   );

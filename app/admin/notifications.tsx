@@ -12,7 +12,7 @@ import { useToast } from '@/components/ui/Toast';
 
 export default function AdminNotifications() {
   const toast = useToast();
-  const items = useNotifications();
+  const { items, loading: listLoading } = useNotifications();
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [loading, setLoading] = useState(false);

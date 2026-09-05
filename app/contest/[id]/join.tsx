@@ -23,7 +23,7 @@ export default function JoinContest() {
   const router = useRouter();
   const { user } = useAuth();
   const { contest } = useContest(id!);
-  const regs = useContestRegistrations(id!);
+  const { regs: regs } = useContestRegistrations(id!);
   const [slot, setSlot] = useState<number | null>(null);
   const [ign, setIgn] = useState('');
   const [loading, setLoading] = useState(false);

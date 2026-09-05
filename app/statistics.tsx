@@ -11,7 +11,7 @@ import { formatDateTime } from '@/utils/format';
 
 export default function Statistics() {
   const { user } = useAuth();
-  const regs = useUserRegistrations(user?.uid ?? null);
+  const { regs: regs } = useUserRegistrations(user?.uid ?? null);
 
   return (
     <View style={styles.bg}>

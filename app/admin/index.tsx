@@ -12,10 +12,10 @@ import { colors, radius, shadow, spacing } from '@/constants/theme';
 export default function AdminPanel() {
   const router = useRouter();
   const { user } = useAuth();
-  const deposits = useDeposits();
-  const withdrawals = useWithdrawals();
-  const users = useUsers();
-  const contests = useAllContests();
+  const { items: deposits } = useDeposits();
+  const { items: withdrawals } = useWithdrawals();
+  const { users } = useUsers();
+  const { contests } = useAllContests();
 
   if (user?.role !== 'admin') {
     return (

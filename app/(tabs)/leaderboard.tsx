@@ -9,6 +9,7 @@ import EmptyState from '@/components/ui/EmptyState';
 import { useLeaderboard } from '@/hooks/useData';
 import { useAuth } from '@/hooks/useAuth';
 import { colors, gradients, radius, shadow, spacing } from '@/constants/theme';
+import { ListSkeleton } from '@/components/ui/Skeleton';
 
 const PERIODS = [
   { key: 'weekly', label: 'Weekly' },
@@ -20,7 +21,7 @@ const MEDAL = ['#F5B301', '#B8C4CE', '#CD7F32'];
 
 export default function Leaderboard() {
   const insets = useSafeAreaInsets();
-  const users = useLeaderboard();
+  const { users, loading } = useLeaderboard();
   const { uid } = useAuth();
   const [period, setPeriod] = useState('weekly');
 
@@ -35,7 +36,9 @@ export default function Leaderboard() {
       </View>
 
       <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: 90 }} showsVerticalScrollIndicator={false}>
-        {users.length === 0 ? (
+        {loading ? (
+          <ListSkeleton count={7} />
+        ) : users.length === 0 ? (
           <EmptyState icon="trophy-outline" title="No rankings yet" subtitle="Win contests to climb the board." />
         ) : (
           users.map((u, i) => {

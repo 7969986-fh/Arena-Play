@@ -16,7 +16,7 @@ import { relativeTime } from '@/utils/format';
 export default function WalletScreen() {
   const router = useRouter();
   const { user } = useAuth();
-  const txns = useTransactions(user?.uid ?? null);
+  const { txns: txns, loading } = useTransactions(user?.uid ?? null);
 
   return (
     <View style={styles.bg}>

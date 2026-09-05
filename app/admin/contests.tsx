@@ -12,6 +12,7 @@ import { backend } from '@/services/backend';
 import { Contest } from '@/models/types';
 import { colors, radius, spacing } from '@/constants/theme';
 import { formatSchedule } from '@/utils/format';
+import { ContestListSkeleton } from '@/components/ui/Skeleton';
 
 const STATUS_COLOR: Record<Contest['status'], string> = {
   upcoming: colors.info, ongoing: colors.success, resulted: colors.textMuted,
@@ -19,7 +20,7 @@ const STATUS_COLOR: Record<Contest['status'], string> = {
 
 export default function AdminContests() {
   const router = useRouter();
-  const contests = useAllContests();
+  const { contests, loading } = useAllContests();
 
   function confirmDelete(c: Contest) {
     Alert.alert('Delete contest', `Delete "${c.title}"?`, [
@@ -35,7 +36,9 @@ export default function AdminContests() {
         <Button label="+ Create Contest" onPress={() => router.push('/admin/create-contest')} />
       </View>
       <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingTop: 0 }}>
-        {contests.length === 0 ? (
+        {loading ? (
+          <ContestListSkeleton />
+        ) : contests.length === 0 ? (
           <EmptyState icon="game-controller-outline" title="No contests" subtitle="Create one to get started." />
         ) : (
           contests.map((c) => (

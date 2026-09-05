@@ -16,7 +16,7 @@ export default function Joinings() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
   const { contest } = useContest(id!);
-  const regs = useContestRegistrations(id!);
+  const { regs } = useContestRegistrations(id!);
 
   const sorted = [...regs].sort((a, b) => a.slotNumber - b.slotNumber);
 

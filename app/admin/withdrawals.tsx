@@ -4,7 +4,7 @@ import { useWithdrawals } from '@/hooks/useData';
 import { backend } from '@/services/backend';
 
 export default function AdminWithdrawals() {
-  const withdrawals = useWithdrawals();
+  const { items: withdrawals, loading } = useWithdrawals();
   return (
     <MoneyRequestList
       title="Withdrawals"

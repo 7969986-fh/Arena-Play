@@ -4,7 +4,7 @@ import { useDeposits } from '@/hooks/useData';
 import { backend } from '@/services/backend';
 
 export default function AdminDeposits() {
-  const deposits = useDeposits();
+  const { items: deposits, loading } = useDeposits();
   return (
     <MoneyRequestList
       title="Deposits"

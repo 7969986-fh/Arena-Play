@@ -9,7 +9,7 @@ import { colors, spacing } from '@/constants/theme';
 import { relativeTime } from '@/utils/format';
 
 export default function Notifications() {
-  const items = useNotifications();
+  const { items, loading } = useNotifications();
   return (
     <View style={styles.bg}>
       <Header title="Notifications" />

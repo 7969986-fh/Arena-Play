@@ -19,7 +19,7 @@ export default function ManageMatch() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
   const { contest } = useContest(id!);
-  const regs = useContestRegistrations(id!);
+  const { regs: regs } = useContestRegistrations(id!);
   const [roomId, setRoomId] = useState('');
   const [roomPw, setRoomPw] = useState('');
   // Result screenshot opened fullscreen while verifying a player's row.

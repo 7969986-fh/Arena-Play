@@ -34,7 +34,7 @@ export default function ContestDetails() {
   const router = useRouter();
   const { user } = useAuth();
   const { contest, loading } = useContest(id!);
-  const regs = useUserRegistrations(user?.uid ?? null);
+  const { regs: regs } = useUserRegistrations(user?.uid ?? null);
   const [, tick] = useState(0);
   const [proof, setProof] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);

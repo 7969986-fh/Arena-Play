@@ -10,6 +10,7 @@ import { backend } from '@/services/backend';
 import { AppUser, Role } from '@/models/types';
 import { colors, radius, spacing } from '@/constants/theme';
 import { useToast } from '@/components/ui/Toast';
+import { ListSkeleton } from '@/components/ui/Skeleton';
 
 const ROLES: Role[] = ['player', 'staff', 'admin'];
 const ROLE_COLOR: Record<Role, string> = {
@@ -18,7 +19,7 @@ const ROLE_COLOR: Record<Role, string> = {
 
 export default function AdminUsers() {
   const toast = useToast();
-  const users = useUsers();
+  const { users, loading } = useUsers();
   const { uid } = useAuth();
   const [busy, setBusy] = useState<string | null>(null);
 
@@ -51,7 +52,9 @@ export default function AdminUsers() {
     <View style={styles.bg}>
       <Header title="Manage Users" />
       <ScrollView contentContainerStyle={{ padding: spacing.lg }}>
-        {users.length === 0 ? (
+        {loading ? (
+          <ListSkeleton count={5} />
+        ) : users.length === 0 ? (
           <EmptyState icon="people-outline" title="No users yet" />
         ) : (
           users.map((u) => (

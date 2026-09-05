@@ -21,7 +21,7 @@ export default function MyMatches() {
   const { filter } = useLocalSearchParams<{ filter?: string }>();
   const router = useRouter();
   const { user } = useAuth();
-  const regs = useUserRegistrations(user?.uid ?? null);
+  const { regs: regs } = useUserRegistrations(user?.uid ?? null);
   const [contests, setContests] = useState<Record<string, Contest>>({});
   const [tab, setTab] = useState<ContestStatus>(
     (filter === 'completed' ? 'resulted' : (filter as ContestStatus)) || 'ongoing'

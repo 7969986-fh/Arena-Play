@@ -32,64 +32,73 @@ export function useContest(id: string) {
 }
 
 export function useContestRegistrations(contestId: string) {
+  const [loading, setLoading] = useState(true);
   const [regs, setRegs] = useState<Registration[]>([]);
   useEffect(() => {
     if (!contestId) return;
-    return backend.watchContestRegistrations(contestId, setRegs);
+    return backend.watchContestRegistrations(contestId, (v) => { setRegs(v); setLoading(false); });
   }, [contestId]);
-  return regs;
+  return { regs, loading };
 }
 
 export function useUserRegistrations(uid: string | null) {
+  const [loading, setLoading] = useState(true);
   const [regs, setRegs] = useState<Registration[]>([]);
   useEffect(() => {
     if (!uid) { setRegs([]); return; }
-    return backend.watchUserRegistrations(uid, setRegs);
+    return backend.watchUserRegistrations(uid, (v) => { setRegs(v); setLoading(false); });
   }, [uid]);
-  return regs;
+  return { regs, loading };
 }
 
 export function useTransactions(uid: string | null) {
+  const [loading, setLoading] = useState(true);
   const [txns, setTxns] = useState<Transaction[]>([]);
   useEffect(() => {
     if (!uid) { setTxns([]); return; }
-    return backend.watchTransactions(uid, setTxns);
+    return backend.watchTransactions(uid, (v) => { setTxns(v); setLoading(false); });
   }, [uid]);
-  return txns;
+  return { txns, loading };
 }
 
 export function useLeaderboard() {
+  const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState<AppUser[]>([]);
-  useEffect(() => backend.watchLeaderboard(setUsers), []);
-  return users;
+  useEffect(() => backend.watchLeaderboard((v) => { setUsers(v); setLoading(false); }), []);
+  return { users, loading };
 }
 
 export function useNotifications() {
+  const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<AppNotification[]>([]);
-  useEffect(() => backend.watchNotifications(setItems), []);
-  return items;
+  useEffect(() => backend.watchNotifications((v) => { setItems(v); setLoading(false); }), []);
+  return { items, loading };
 }
 
 export function useAllContests() {
+  const [loading, setLoading] = useState(true);
   const [contests, setContests] = useState<Contest[]>([]);
-  useEffect(() => backend.watchAllContests(setContests), []);
-  return contests;
+  useEffect(() => backend.watchAllContests((v) => { setContests(v); setLoading(false); }), []);
+  return { contests, loading };
 }
 
 export function useUsers() {
+  const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState<AppUser[]>([]);
-  useEffect(() => backend.watchUsers(setUsers), []);
-  return users;
+  useEffect(() => backend.watchUsers((v) => { setUsers(v); setLoading(false); }), []);
+  return { users, loading };
 }
 
 export function useDeposits() {
+  const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<MoneyRequest[]>([]);
-  useEffect(() => backend.watchDeposits(setItems), []);
-  return items;
+  useEffect(() => backend.watchDeposits((v) => { setItems(v); setLoading(false); }), []);
+  return { items, loading };
 }
 
 export function useWithdrawals() {
+  const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<MoneyRequest[]>([]);
-  useEffect(() => backend.watchWithdrawals(setItems), []);
-  return items;
+  useEffect(() => backend.watchWithdrawals((v) => { setItems(v); setLoading(false); }), []);
+  return { items, loading };
 }

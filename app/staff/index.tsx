@@ -24,7 +24,7 @@ const STATUS_COLOR: Record<Contest['status'], string> = {
 export default function StaffPanel() {
   const { user } = useAuth();
   const router = useRouter();
-  const contests = useAllContests();
+  const { contests, loading } = useAllContests();
   const [tab, setTab] = useState<ContestStatus>('upcoming');
 
   if (user?.role !== 'admin' && user?.role !== 'staff') {

@@ -9,6 +9,7 @@ import EmptyState from '@/components/ui/EmptyState';
 import { useContests, useGames } from '@/hooks/useData';
 import { ContestStatus } from '@/models/types';
 import { colors, spacing } from '@/constants/theme';
+import { ContestListSkeleton } from '@/components/ui/Skeleton';
 
 const TABS: { key: ContestStatus; label: string }[] = [
   { key: 'ongoing', label: 'Ongoing' },
@@ -36,7 +37,9 @@ export default function GameContests() {
         contentContainerStyle={{ padding: spacing.lg, paddingBottom: 40 }}
         showsVerticalScrollIndicator={false}
       >
-        {filtered.length === 0 && !loading ? (
+        {loading ? (
+          <ContestListSkeleton />
+        ) : filtered.length === 0 ? (
           <EmptyState
             icon="trophy-outline"
             title={`No ${tab} contests`}
