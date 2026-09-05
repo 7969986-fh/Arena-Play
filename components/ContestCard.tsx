@@ -3,7 +3,7 @@ import { ImageBackground, Pressable, StyleSheet, Text, View } from 'react-native
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Contest } from '@/models/types';
-import { gameArt } from '@/constants/gameArt';
+import { contestArt } from '@/constants/gameArt';
 import Coin from '@/components/ui/Coin';
 import { colors, radius, shadow } from '@/constants/theme';
 import { formatSchedule } from '@/utils/format';
@@ -32,7 +32,7 @@ export default function ContestCard({
 
   return (
     <Pressable style={[styles.card, shadow.md]} onPress={onPress}>
-      <ImageBackground source={gameArt(contest.gameId)} style={styles.banner} imageStyle={styles.bannerImg}>
+      <ImageBackground source={contestArt(contest.gameId, contest.bannerUrl)} style={styles.banner} imageStyle={styles.bannerImg}>
         <LinearGradient colors={['rgba(0,0,0,0.45)', 'rgba(0,0,0,0.15)']} style={StyleSheet.absoluteFill} />
         <View style={styles.typePill}>
           <Text style={styles.typePillTxt}>

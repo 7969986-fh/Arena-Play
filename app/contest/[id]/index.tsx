@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Alert } from 'react-native';
+import { Alert, Linking } from 'react-native';
 import { ImageBackground, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,7 +13,7 @@ import { backend } from '@/services/backend';
 import { cancelMatchReminders } from '@/utils/notify';
 import { useContest, useUserRegistrations } from '@/hooks/useData';
 import { useAuth } from '@/hooks/useAuth';
-import { gameArt } from '@/constants/gameArt';
+import { contestArt } from '@/constants/gameArt';
 import { shareContest } from '@/utils/share';
 import { colors, radius, shadow, spacing } from '@/constants/theme';
 import { countdown, formatSchedule } from '@/utils/format';
@@ -71,7 +71,7 @@ export default function ContestDetails() {
       />
       <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
         <ImageBackground
-          source={gameArt(contest.gameId)}
+          source={contestArt(contest.gameId, contest.bannerUrl)}
           style={[styles.banner, shadow.md]}
           imageStyle={styles.bannerImg}
         >
@@ -185,6 +185,22 @@ export default function ContestDetails() {
           </Card>
         )}
 
+        <View style={styles.linkRow}>
+          <Pressable
+            style={styles.linkBtn}
+            onPress={() => router.push(`/contest/${contest.id}/joinings`)}
+          >
+            <Ionicons name="people" size={17} color={colors.primaryDark} />
+            <Text style={styles.linkTxt}>All Joinings ({contest.filledSlots})</Text>
+          </Pressable>
+          {contest.videoUrl ? (
+            <Pressable style={styles.linkBtn} onPress={() => Linking.openURL(contest.videoUrl!)}>
+              <Ionicons name="play-circle" size={17} color={colors.primaryDark} />
+              <Text style={styles.linkTxt}>Watch Video</Text>
+            </Pressable>
+          ) : null}
+        </View>
+
         <Text style={styles.sectionTitle}>Prize Details</Text>
         <Card>
           {contest.prizeBreakdown.map((p, i) => (
@@ -249,6 +265,12 @@ const styles = StyleSheet.create({
   roomValue: { fontSize: 16, fontWeight: '900', color: '#7A5200', letterSpacing: 1 },
   sectionTitle: { fontSize: 17, fontWeight: '900', color: colors.text, marginTop: spacing.lg, marginBottom: 10 },
   rankLabel: { fontSize: 14, fontWeight: '800', color: colors.text },
+  linkRow: { flexDirection: 'row', gap: 10, marginTop: spacing.md },
+  linkBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    backgroundColor: colors.mint, borderRadius: radius.md, paddingVertical: 12,
+  },
+  linkTxt: { fontSize: 12.5, fontWeight: '800', color: colors.primaryDark },
   proofOk: { fontSize: 14, fontWeight: '800', color: colors.primary },
   proofHint: { fontSize: 11.5, color: colors.textMuted, fontWeight: '600', marginTop: 4 },
   rules: { fontSize: 14, color: colors.textMuted, lineHeight: 20, fontWeight: '500' },

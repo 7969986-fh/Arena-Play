@@ -63,6 +63,8 @@ const toContest = (r: any): Contest => ({
   roomPassword: r.room_password ?? '',
   prizeBreakdown: r.prize_breakdown ?? [],
   rules: r.rules ?? '',
+  bannerUrl: r.banner_url ?? '',
+  videoUrl: r.video_url ?? '',
   createdAt: Number(r.created_at),
 });
 
@@ -87,6 +89,8 @@ const contestToRow = (c: Partial<Contest> | ContestInput) => {
   put('room_password', a.roomPassword);
   put('prize_breakdown', a.prizeBreakdown);
   put('rules', a.rules);
+  put('banner_url', a.bannerUrl);
+  put('video_url', a.videoUrl);
   return r;
 };
 
@@ -404,7 +408,7 @@ class SupabaseBackend implements Backend {
   }
 
   // ---- storage ----
-  async uploadImage(localUri: string, folder: 'deposits' | 'results') {
+  async uploadImage(localUri: string, folder: 'deposits' | 'results' | 'contests') {
     const ext = (localUri.split('.').pop() ?? 'jpg').split('?')[0].toLowerCase();
     const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
 

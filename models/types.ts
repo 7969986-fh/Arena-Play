@@ -64,6 +64,10 @@ export interface Contest {
   roomPassword?: string;
   prizeBreakdown: PrizeRow[];
   rules?: string;
+  /** Admin-supplied banner, overriding the generated game artwork. */
+  bannerUrl?: string;
+  /** Optional promo or explainer video for the contest. */
+  videoUrl?: string;
   bannerColor?: string;
   createdAt: number;
 }

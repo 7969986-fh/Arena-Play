@@ -21,6 +21,14 @@ export function gameArt(id: string): ImageSourcePropType {
   return GAME_ART[id] ?? GAME_ART['br-survival'];
 }
 
+/**
+ * Banner for a contest: the admin's own upload when there is one,
+ * otherwise the generated artwork for its game mode.
+ */
+export function contestArt(gameId: string, bannerUrl?: string): ImageSourcePropType {
+  return bannerUrl ? { uri: bannerUrl } : gameArt(gameId);
+}
+
 export interface Promo {
   id: string;
   image: ImageSourcePropType;

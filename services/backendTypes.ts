@@ -31,6 +31,8 @@ export interface ContestInput {
   schedule: number;
   prizeBreakdown: Contest['prizeBreakdown'];
   rules?: string;
+  bannerUrl?: string;
+  videoUrl?: string;
 }
 
 /** Extra evidence a player attaches to a manual UPI deposit. */
@@ -112,7 +114,7 @@ export interface Backend {
    * The local backend keeps the on-device URI as-is; a cloud backend
    * uploads the file and returns its public URL.
    */
-  uploadImage(localUri: string, folder: 'deposits' | 'results'): Promise<string>;
+  uploadImage(localUri: string, folder: 'deposits' | 'results' | 'contests'): Promise<string>;
 
   // Setup
   seed(): Promise<void>;

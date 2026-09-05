@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import Header from '@/components/ui/Header';
 import Card from '@/components/ui/Card';
@@ -7,6 +7,8 @@ import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import { useGames } from '@/hooks/useData';
 import { backend } from '@/services/backend';
+import ScreenshotPicker from '@/components/ScreenshotPicker';
+import { DEFAULT_RULES } from '@/constants/rules';
 import { ContestMode, MatchType, PrizeRow } from '@/models/types';
 import { colors, radius, spacing } from '@/constants/theme';
 
@@ -42,6 +44,9 @@ export default function CreateContest() {
   const [perKill, setPerKill] = useState('0');
   const [slots, setSlots] = useState('20');
   const [schedH, setSchedH] = useState(6);
+  const [rules, setRules] = useState(DEFAULT_RULES);
+  const [banner, setBanner] = useState<string | null>(null);
+  const [videoUrl, setVideoUrl] = useState('');
   const [loading, setLoading] = useState(false);
 
   async function submit() {
@@ -62,7 +67,9 @@ export default function CreateContest() {
         totalSlots: parseInt(slots, 10) || 2,
         schedule: Date.now() + schedH * 3600_000,
         prizeBreakdown: autoPrize(pool),
-        rules: 'No teaming. No hacks. Screen recording mandatory.',
+        rules: rules.trim(),
+        bannerUrl: banner ? await backend.uploadImage(banner, 'contests') : '',
+        videoUrl: videoUrl.trim(),
       });
       Alert.alert('Created', 'Contest published.', [{ text: 'OK', onPress: () => router.back() }]);
     } catch (e: any) { Alert.alert('Error', e?.message ?? 'Failed'); }
@@ -108,6 +115,34 @@ export default function CreateContest() {
             {SCHEDULES.map((s) => <Chip key={s.h} label={s.label} active={schedH === s.h} onPress={() => setSchedH(s.h)} />)}
           </View>
 
+          <Text style={styles.label}>Banner image (optional)</Text>
+          <ScreenshotPicker
+            value={banner}
+            onChange={setBanner}
+            label=""
+            hint="Replaces the default artwork on this contest's cards"
+          />
+
+          <Input
+            label="Video link (optional)"
+            placeholder="YouTube or any video URL"
+            autoCapitalize="none"
+            value={videoUrl}
+            onChangeText={setVideoUrl}
+            containerStyle={{ marginTop: spacing.md }}
+          />
+
+          <Text style={styles.label}>Rules</Text>
+          <TextInput
+            style={styles.rulesInput}
+            multiline
+            textAlignVertical="top"
+            value={rules}
+            onChangeText={setRules}
+            placeholder="Match rules shown to players before joining"
+            placeholderTextColor={colors.textFaint}
+          />
+
           <Text style={styles.hint}>Prize split (top places) is auto-generated from the prize pool.</Text>
           <Button label="Publish Contest" onPress={submit} loading={loading} style={{ marginTop: spacing.sm }} />
         </Card>
@@ -126,5 +161,10 @@ const styles = StyleSheet.create({
   chipTxtActive: { color: '#fff' },
   grid2: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
   half: { width: '48%' },
+  rulesInput: {
+    minHeight: 150, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md,
+    padding: 12, fontSize: 12.5, lineHeight: 19, color: colors.text,
+    backgroundColor: colors.surfaceMuted, marginBottom: spacing.md,
+  },
   hint: { fontSize: 12, color: colors.textFaint, marginBottom: 8 },
 });

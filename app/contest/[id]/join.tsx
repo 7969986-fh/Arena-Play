@@ -1,5 +1,6 @@
+import { Ionicons } from '@expo/vector-icons';
 import React, { useMemo, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import Header from '@/components/ui/Header';
 import Card from '@/components/ui/Card';
@@ -11,6 +12,7 @@ import { useContest, useContestRegistrations } from '@/hooks/useData';
 import { useAuth } from '@/hooks/useAuth';
 import { backend } from '@/services/backend';
 import { scheduleMatchReminders } from '@/utils/notify';
+import { DEFAULT_RULES } from '@/constants/rules';
 import { walletTotal } from '@/models/types';
 import { colors, spacing } from '@/constants/theme';
 
@@ -23,6 +25,8 @@ export default function JoinContest() {
   const [slot, setSlot] = useState<number | null>(null);
   const [ign, setIgn] = useState('');
   const [loading, setLoading] = useState(false);
+  const [accepted, setAccepted] = useState(false);
+  const [rulesOpen, setRulesOpen] = useState(false);
 
   const taken = useMemo(() => regs.map((r) => r.slotNumber), [regs]);
   const balance = walletTotal(user?.wallet);
@@ -39,6 +43,7 @@ export default function JoinContest() {
   async function onJoin() {
     if (!slot) { Alert.alert('Select a slot', 'Please choose an open match position.'); return; }
     if (!ign.trim()) { Alert.alert('In-game name', 'Please enter your in-game username.'); return; }
+    if (!accepted) { Alert.alert('Accept the rules', 'Please read and accept the match rules before joining.'); return; }
     if (contest!.entryFee > 0 && balance < contest!.entryFee) {
       Alert.alert('Low balance', 'Please recharge your wallet to join this paid match.', [
         { text: 'Cancel', style: 'cancel' },
@@ -93,9 +98,38 @@ export default function JoinContest() {
         />
         <Text style={styles.note}>Note: Enter your exact in-game username. Wrong names may be disqualified.</Text>
 
+        <Text style={styles.section}>Match Rules</Text>
+        <Card>
+          <Text style={styles.rules} numberOfLines={rulesOpen ? undefined : 6}>
+            {contest.rules || DEFAULT_RULES}
+          </Text>
+          <Pressable onPress={() => setRulesOpen((v) => !v)} hitSlop={8}>
+            <Text style={styles.rulesToggle}>
+              {rulesOpen ? 'Show less' : 'Read all rules'}
+            </Text>
+          </Pressable>
+        </Card>
+
+        <Pressable style={styles.acceptRow} onPress={() => setAccepted((v) => !v)}>
+          <View style={[styles.box, accepted && styles.boxOn]}>
+            {accepted && <Ionicons name="checkmark" size={15} color="#fff" />}
+          </View>
+          <Text style={styles.acceptTxt}>
+            I have read and agree to the match rules, and understand that breaking
+            them can forfeit my prize.
+          </Text>
+        </Pressable>
+
         <View style={styles.actions}>
           <Button label="Cancel" variant="outline" onPress={() => router.back()} style={{ flex: 1 }} fullWidth={false} />
-          <Button label="Join" onPress={onJoin} loading={loading} style={{ flex: 1 }} fullWidth={false} />
+          <Button
+            label="Join"
+            onPress={onJoin}
+            loading={loading}
+            disabled={!accepted}
+            style={{ flex: 1 }}
+            fullWidth={false}
+          />
         </View>
       </ScrollView>
     </View>
@@ -121,5 +155,17 @@ const styles = StyleSheet.create({
   free: { color: colors.success, fontWeight: '900', fontSize: 15 },
   section: { fontSize: 16, fontWeight: '900', color: colors.text, marginTop: spacing.lg, marginBottom: 12 },
   note: { fontSize: 12, color: colors.textMuted, marginTop: 6, fontWeight: '500' },
+  rules: { fontSize: 12.5, lineHeight: 19, color: colors.textMuted, fontWeight: '500' },
+  rulesToggle: { marginTop: 8, fontSize: 12.5, fontWeight: '800', color: colors.primary },
+  acceptRow: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 10,
+    marginTop: spacing.md, paddingHorizontal: 2,
+  },
+  box: {
+    width: 22, height: 22, borderRadius: 6, borderWidth: 2,
+    borderColor: colors.primary, alignItems: 'center', justifyContent: 'center', marginTop: 1,
+  },
+  boxOn: { backgroundColor: colors.primary },
+  acceptTxt: { flex: 1, fontSize: 12.5, lineHeight: 18, color: colors.text, fontWeight: '600' },
   actions: { flexDirection: 'row', gap: 12, marginTop: spacing.xl },
 });

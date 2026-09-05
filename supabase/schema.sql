@@ -47,8 +47,14 @@ create table if not exists public.contests (
   room_password   text default '',
   prize_breakdown jsonb not null default '[]'::jsonb,
   rules           text default '',
+  banner_url      text default '',
+  video_url       text default '',
   created_at      bigint not null
 );
+
+-- Added after the first release; safe on an existing database.
+alter table public.contests add column if not exists banner_url text default '';
+alter table public.contests add column if not exists video_url  text default '';
 
 create table if not exists public.registrations (
   id           uuid primary key default gen_random_uuid(),

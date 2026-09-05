@@ -39,6 +39,7 @@ function RootNavigator() {
       <Stack.Screen name="game/[id]" />
       <Stack.Screen name="contest/[id]/index" />
       <Stack.Screen name="contest/[id]/join" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="contest/[id]/joinings" />
     </Stack>
   );
 }
