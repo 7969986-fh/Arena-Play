@@ -21,11 +21,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [initializing, setInitializing] = useState(true);
 
   useEffect(() => {
+    // A slow or unreachable backend must not strand the user on the loading
+    // screen: after this long, show the login screen instead. A session that
+    // arrives later still signs them in, because onAuthChange keeps running.
+    const bail = setTimeout(() => setInitializing(false), 6000);
+
     const off = backend.onAuthChange((next) => {
+      clearTimeout(bail);
       setUid(next);
       setInitializing(false);
     });
-    return off;
+
+    return () => {
+      clearTimeout(bail);
+      off();
+    };
   }, []);
 
   useEffect(() => {

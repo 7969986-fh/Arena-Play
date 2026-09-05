@@ -470,6 +470,12 @@ begin
   )
   on conflict (uid) do nothing;
   return new;
+exception when others then
+  -- Never block sign-up over profile creation: raising here makes Supabase
+  -- reject the whole registration with "Database error saving new user".
+  -- The app backfills a missing profile on first load instead.
+  raise warning 'handle_new_user failed for %: %', new.id, sqlerrm;
+  return new;
 end $$;
 
 drop trigger if exists on_auth_user_created on auth.users;

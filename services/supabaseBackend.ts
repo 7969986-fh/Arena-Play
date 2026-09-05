@@ -187,21 +187,39 @@ class SupabaseBackend implements Backend {
   // ---- auth ----
   onAuthChange(cb: (uid: string | null) => void): Unsub {
     // Report the restored session first; onAuthStateChange only fires on
-    // changes, so a cold start would otherwise hang on the splash screen.
-    supabase.auth.getSession().then(({ data }) => cb(data.session?.user.id ?? null));
+    // changes, so a cold start would otherwise wait forever on the loading
+    // screen. This must report *something* even when the call fails — an
+    // unresolved promise here leaves the user staring at a spinner, so a
+    // failure is reported as signed-out and the login screen is shown.
+    supabase.auth
+      .getSession()
+      .then(({ data }) => cb(data.session?.user.id ?? null))
+      .catch((e) => {
+        console.warn('[supabase] could not restore session', e?.message);
+        cb(null);
+      });
+
     const { data } = supabase.auth.onAuthStateChange((_e, session) =>
       cb(session?.user.id ?? null));
     return () => data.subscription.unsubscribe();
   }
 
   async signUp(username: string, email: string, password: string, referredBy?: string) {
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       // The on_auth_user_created trigger reads these to build the profile.
       options: { data: { username, referredBy: referredBy ?? '' } },
     });
     if (error) throw new Error(error.message);
+
+    // Supabase returns a user but no session when "Confirm email" is on.
+    // Without this the screen would just stop, looking like nothing happened.
+    if (!data.session) {
+      throw new Error(
+        'Account created. Check your email and confirm the link before signing in.',
+      );
+    }
   }
 
   async signIn(email: string, password: string) {
@@ -230,7 +248,16 @@ class SupabaseBackend implements Backend {
       provider: 'google',
       options: { redirectTo, skipBrowserRedirect: true },
     });
-    if (error) throw new Error(error.message);
+    if (error) {
+      // The provider being switched off is by far the most common cause,
+      // and Supabase reports it in a form that means nothing to a player.
+      if (/provider.*not enabled|Unsupported provider/i.test(error.message)) {
+        throw new Error(
+          'Google sign-in is not switched on for this app yet. Use email and password for now.',
+        );
+      }
+      throw new Error(error.message);
+    }
     if (!data?.url) throw new Error('Could not start Google sign-in.');
 
     const res = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
@@ -255,8 +282,40 @@ class SupabaseBackend implements Backend {
     return live('users', async () => {
       const { data, error } = await supabase.from('users').select('*').eq('uid', uid).maybeSingle();
       if (error) throw error;
-      return data ? toUser(data) : null;
+      if (data) return toUser(data);
+
+      // Signed in but no profile row: the on_auth_user_created trigger did
+      // not run or failed. Build the row here rather than leaving an account
+      // that can sign in but has no wallet, name or role.
+      return this.createMissingProfile(uid);
     }, cb);
+  }
+
+  /** Backfills a profile for an authenticated user that has no row yet. */
+  private async createMissingProfile(uid: string): Promise<AppUser | null> {
+    const { data: auth } = await supabase.auth.getUser();
+    const meta = (auth.user?.user_metadata ?? {}) as Record<string, string>;
+    const email = auth.user?.email ?? '';
+    if (!auth.user || auth.user.id !== uid) return null;
+
+    const row = {
+      uid,
+      username: meta.username || meta.full_name || meta.name || email.split('@')[0] || 'Player',
+      email,
+      referral_code: uid.replace(/-/g, '').slice(0, 8).toUpperCase(),
+      referred_by: meta.referredBy || null,
+      wallet: { deposit: 0, winnings: 0, bonus: 25 },
+      stats: { matchesPlayed: 0, kills: 0, earnings: 0 },
+      created_at: Date.now(),
+    };
+
+    const { data, error } = await supabase
+      .from('users').insert(row).select().maybeSingle();
+    if (error) {
+      console.warn('[supabase] could not create profile', error.message);
+      return null;
+    }
+    return data ? toUser(data) : null;
   }
 
   // ---- catalog ----

@@ -69,7 +69,8 @@
         {
           "photosPermission": "Arena Play needs your photos so you can attach payment and match result screenshots."
         }
-      ]
+      ],
+      "./plugins/withSlimAbi"
     ],
     "experiments": {
       "typedRoutes": true
