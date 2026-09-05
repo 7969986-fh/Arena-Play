@@ -455,7 +455,13 @@ begin
   insert into public.users(uid, username, email, referral_code, referred_by, wallet, created_at)
   values (
     new.id,
-    coalesce(new.raw_user_meta_data->>'username', split_part(new.email, '@', 1)),
+    -- email signup sends 'username'; Google sends 'full_name' / 'name'
+    coalesce(
+      nullif(new.raw_user_meta_data->>'username', ''),
+      nullif(new.raw_user_meta_data->>'full_name', ''),
+      nullif(new.raw_user_meta_data->>'name', ''),
+      split_part(new.email, '@', 1)
+    ),
     new.email,
     code,
     nullif(new.raw_user_meta_data->>'referredBy', ''),

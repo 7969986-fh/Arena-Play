@@ -90,6 +90,20 @@ before it works:
 Then set your own values in `constants/app.ts` — the UPI ID deposits are
 paid to, your support contacts, and the APK download link.
 
+### Optional: Google sign-in
+
+The Google button only appears once the provider is enabled — until then the
+app shows email sign-in alone, so nothing looks broken.
+
+1. In **Google Cloud Console** → APIs & Services → Credentials, create an
+   **OAuth client ID** of type *Web application*.
+2. Add this to **Authorized redirect URIs**, using your own project ref:
+   `https://<your-ref>.supabase.co/auth/v1/callback`
+3. In Supabase → **Authentication → Providers → Google**, paste the client ID
+   and client secret, and enable it.
+4. In Supabase → **Authentication → URL Configuration**, add `arenaplay://` to
+   **Redirect URLs** so the app can catch the sign-in coming back.
+
 ### Making yourself admin
 
 Sign up in the app first, then in the SQL Editor run:

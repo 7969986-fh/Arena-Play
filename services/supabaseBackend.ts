@@ -1,3 +1,5 @@
+import * as WebBrowser from 'expo-web-browser';
+import { makeRedirectUri } from 'expo-auth-session';
 import { supabase } from '@/lib/supabase';
 import {
   AppNotification,
@@ -207,6 +209,37 @@ class SupabaseBackend implements Backend {
   async signIn(email: string, password: string) {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw new Error(error.message);
+  }
+
+  readonly supportsGoogle = true;
+
+  /**
+   * Opens Google in a system browser tab and exchanges the code it returns
+   * for a session. `skipBrowserRedirect` keeps the SDK from navigating on
+   * its own — on a device there is no page to navigate, so the app drives
+   * the tab and catches the deep link back itself.
+   */
+  async signInWithGoogle() {
+    const redirectTo = makeRedirectUri({ scheme: 'arenaplay', path: 'auth-callback' });
+
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo, skipBrowserRedirect: true },
+    });
+    if (error) throw new Error(error.message);
+    if (!data?.url) throw new Error('Could not start Google sign-in.');
+
+    const res = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+    if (res.type !== 'success') {
+      // The player closed the tab or hit cancel; not an error worth showing.
+      throw new Error('CANCELLED');
+    }
+
+    const code = new URL(res.url).searchParams.get('code');
+    if (!code) throw new Error('Google did not return a sign-in code.');
+
+    const { error: exErr } = await supabase.auth.exchangeCodeForSession(code);
+    if (exErr) throw new Error(exErr.message);
   }
 
   async signOut() {

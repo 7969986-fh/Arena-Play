@@ -55,6 +55,12 @@ export interface Backend {
   signUp(username: string, email: string, password: string, referredBy?: string): Promise<void>;
   signIn(email: string, password: string): Promise<void>;
   signOut(): Promise<void>;
+  /**
+   * Google OAuth. Backends that cannot offer it throw, and the UI hides the
+   * button when `supportsGoogle` is false.
+   */
+  readonly supportsGoogle: boolean;
+  signInWithGoogle(): Promise<void>;
 
   // User
   watchUser(uid: string, cb: (u: AppUser | null) => void): Unsub;

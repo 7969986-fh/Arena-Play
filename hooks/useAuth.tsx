@@ -9,6 +9,8 @@ interface AuthState {
   signUp: (username: string, email: string, password: string, referredBy?: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
+  supportsGoogle: boolean;
 }
 
 const AuthContext = createContext<AuthState | undefined>(undefined);
@@ -42,6 +44,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signUp: backend.signUp.bind(backend),
     signIn: backend.signIn.bind(backend),
     signOut: backend.signOut.bind(backend),
+    signInWithGoogle: backend.signInWithGoogle.bind(backend),
+    supportsGoogle: backend.supportsGoogle,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
