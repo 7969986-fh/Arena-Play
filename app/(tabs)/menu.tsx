@@ -8,6 +8,7 @@ import Card from '@/components/ui/Card';
 import StatTile from '@/components/ui/StatTile';
 import { useAuth } from '@/hooks/useAuth';
 import { colors, gradients, radius, shadow, spacing } from '@/constants/theme';
+import { shareApp } from '@/utils/share';
 
 interface Item {
   label: string;
@@ -27,6 +28,7 @@ export default function Menu() {
     { label: 'My Wallet', icon: 'wallet-outline', route: '/wallet' },
     { label: 'My Statistics', icon: 'stats-chart-outline', route: '/statistics' },
     { label: 'Top Players', icon: 'trophy-outline', route: '/(tabs)/leaderboard' },
+    { label: 'Invite Friends', icon: 'share-social-outline', action: shareApp },
     { label: 'Notifications', icon: 'notifications-outline', route: '/notifications' },
     { label: 'Contact Us', icon: 'headset-outline', route: '/info/contact' },
     { label: 'FAQ', icon: 'help-circle-outline', route: '/info/faq' },
@@ -76,14 +78,14 @@ export default function Menu() {
           <>
             <Text style={styles.groupLabel}>Management</Text>
             {admin.map((it) => (
-              <MenuRow key={it.label} item={it} onPress={() => it.route && router.push(it.route as any)} highlight />
+              <MenuRow key={it.label} item={it} onPress={() => (it.action ? it.action() : it.route && router.push(it.route as any))} highlight />
             ))}
           </>
         )}
 
         <Text style={styles.groupLabel}>Account</Text>
         {items.map((it) => (
-          <MenuRow key={it.label} item={it} onPress={() => it.route && router.push(it.route as any)} />
+          <MenuRow key={it.label} item={it} onPress={() => (it.action ? it.action() : it.route && router.push(it.route as any))} />
         ))}
 
         <Card style={styles.noticeRow} elevation="sm" padded>

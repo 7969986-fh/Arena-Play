@@ -4,7 +4,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
-import { Alert, Share } from 'react-native';
+import { Alert } from 'react-native';
+import { shareReferral } from '@/utils/share';
 import { useAuth } from '@/hooks/useAuth';
 import { colors, radius, shadow, spacing } from '@/constants/theme';
 
@@ -24,11 +25,7 @@ export default function Earn() {
     Alert.alert('Copied', 'Referral code copied to clipboard.');
   }
 
-  async function share() {
-    try {
-      await Share.share({ message: `Join me on Arena Play! Use my referral code "${code}" to get a bonus. 🎮` });
-    } catch {}
-  }
+  const share = () => shareReferral(code);
 
   return (
     <View style={styles.bg}>

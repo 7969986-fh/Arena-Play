@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ImageBackground, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -9,7 +9,8 @@ import Button from '@/components/ui/Button';
 import Coin from '@/components/ui/Coin';
 import { useContest, useUserRegistrations } from '@/hooks/useData';
 import { useAuth } from '@/hooks/useAuth';
-import { gameGradient } from '@/constants/games';
+import { gameArt } from '@/constants/gameArt';
+import { shareContest } from '@/utils/share';
 import { colors, radius, shadow, spacing } from '@/constants/theme';
 import { countdown, formatSchedule } from '@/utils/format';
 
@@ -45,17 +46,30 @@ export default function ContestDetails() {
   }
 
   const joined = regs.find((r) => r.contestId === contest.id);
-  const grad = gameGradient(contest.gameId);
   const full = contest.filledSlots >= contest.totalSlots;
 
   return (
     <View style={styles.bg}>
-      <Header title={`Contest #${contest.id.slice(-5)}`} />
+      <Header
+        title={`Contest #${contest.id.slice(-5)}`}
+        right={
+          <Pressable onPress={() => shareContest(contest)} hitSlop={12}>
+            <Ionicons name="share-social" size={22} color={colors.onPrimary} />
+          </Pressable>
+        }
+      />
       <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
-        <LinearGradient colors={grad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.banner, shadow.md]}>
-          <Ionicons name="flame" size={44} color="rgba(255,255,255,0.3)" style={{ position: 'absolute', right: 16, top: 16 }} />
+        <ImageBackground
+          source={gameArt(contest.gameId)}
+          style={[styles.banner, shadow.md]}
+          imageStyle={styles.bannerImg}
+        >
+          <LinearGradient
+            colors={['rgba(0,0,0,0.5)', 'rgba(0,0,0,0.2)']}
+            style={StyleSheet.absoluteFill}
+          />
           <Text style={styles.bannerTitle}>{contest.title}</Text>
-        </LinearGradient>
+        </ImageBackground>
 
         <Card style={styles.countdownCard} elevation="sm">
           <Text style={styles.countdownLabel}>
@@ -155,6 +169,7 @@ export default function ContestDetails() {
 const styles = StyleSheet.create({
   bg: { flex: 1, backgroundColor: colors.bg },
   loading: { textAlign: 'center', marginTop: 40, color: colors.textMuted },
+  bannerImg: { borderRadius: radius.lg, resizeMode: 'cover' },
   banner: { borderRadius: radius.lg, padding: 18, minHeight: 110, justifyContent: 'flex-end' },
   bannerTitle: { color: '#fff', fontSize: 18, fontWeight: '900' },
   countdownCard: { marginTop: spacing.md, alignItems: 'center', backgroundColor: colors.mint },
