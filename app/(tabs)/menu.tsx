@@ -33,6 +33,7 @@ export default function Menu() {
     { label: 'Contact Us', icon: 'headset-outline', route: '/info/contact' },
     { label: 'FAQ', icon: 'help-circle-outline', route: '/info/faq' },
     { label: 'About Us', icon: 'information-circle-outline', route: '/info/about' },
+    { label: 'Terms & Refunds', icon: 'document-text-outline', route: '/info/terms' },
     { label: 'Privacy Policy', icon: 'lock-closed-outline', route: '/info/privacy' },
   ];
 
