@@ -1,12 +1,14 @@
 import 'react-native-gesture-handler';
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as SplashScreen from 'expo-splash-screen';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthProvider, useAuth } from '@/hooks/useAuth';
+import { ONBOARDED_KEY } from '@/app/onboarding';
 import { ToastProvider } from '@/components/ui/Toast';
 import { colors } from '@/constants/theme';
 
@@ -16,16 +18,29 @@ function RootNavigator() {
   const { uid, initializing } = useAuth();
   const segments = useSegments();
   const router = useRouter();
+  // undefined until the flag has been read, so routing waits rather than
+  // flashing the login screen at a first-time player.
+  const [onboarded, setOnboarded] = useState<boolean | undefined>(undefined);
 
   useEffect(() => {
-    if (initializing) return;
-    SplashScreen.hideAsync().catch(() => {});
-    const inAuth = segments[0] === '(auth)';
-    if (!uid && !inAuth) router.replace('/(auth)/login');
-    else if (uid && inAuth) router.replace('/(tabs)');
-  }, [uid, initializing, segments]);
+    AsyncStorage.getItem(ONBOARDED_KEY)
+      .then((v) => setOnboarded(v === '1'))
+      .catch(() => setOnboarded(true));
+  }, []);
 
-  if (initializing) {
+  useEffect(() => {
+    if (initializing || onboarded === undefined) return;
+    SplashScreen.hideAsync().catch(() => {});
+
+    const inAuth = segments[0] === '(auth)';
+    const inOnboarding = segments[0] === 'onboarding';
+
+    if (!uid && !onboarded && !inOnboarding) router.replace('/onboarding');
+    else if (!uid && onboarded && !inAuth) router.replace('/(auth)/login');
+    else if (uid && (inAuth || inOnboarding)) router.replace('/(tabs)');
+  }, [uid, initializing, segments, onboarded]);
+
+  if (initializing || onboarded === undefined) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg }}>
         <ActivityIndicator size="large" color={colors.primary} />
@@ -35,6 +50,7 @@ function RootNavigator() {
 
   return (
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
+      <Stack.Screen name="onboarding" />
       <Stack.Screen name="(auth)" />
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="game/[id]" />
