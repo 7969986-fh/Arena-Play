@@ -58,7 +58,7 @@ export interface ResultRow {
 }
 
 export interface Backend {
-  readonly kind: 'local' | 'firebase' | 'supabase';
+  readonly kind: 'local' | 'firebase' | 'parse';
 
   // Auth
   onAuthChange(cb: (uid: string | null) => void): Unsub;

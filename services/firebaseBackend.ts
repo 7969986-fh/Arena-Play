@@ -329,12 +329,12 @@ class FirebaseBackend implements Backend {
   }
 
   async claimDailyBonus(): Promise<{ reward: number; streak: number }> {
-    throw new Error('Daily bonus needs Supabase.');
+    throw new Error('Daily bonus needs a cloud backend.');
   }
 
   watchRecentWins(cb: (w: RecentWin[]) => void): Unsub {
     // Firestore cannot join the contest title in one query and this build
-    // is superseded by Supabase, so the feed stays empty here.
+    // is superseded by the Parse backend, so the feed stays empty here.
     cb([]);
     return () => {};
   }

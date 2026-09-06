@@ -1,12 +1,12 @@
-import { isSupabaseConfigured } from '@/lib/supabaseConfig';
+import { isParseConfigured } from '@/lib/parseConfig';
 import { isFirebaseConfigured } from '@/lib/firebaseConfig';
 import { Backend } from '@/services/backendTypes';
 import { localBackend } from '@/services/localBackend';
 
 /**
- * Selects the active backend. Supabase when configured, then Firebase,
- * otherwise the local offline store so the app stays fully usable with no
- * cloud setup at all.
+ * Selects the active backend. Parse (Back4App) when configured, then
+ * Firebase, otherwise the local offline store so the app stays fully usable
+ * with no cloud setup at all.
  *
  * Requires are lazy so an unconfigured cloud SDK never initializes, and are
  * guarded because this module is loaded during app startup: a cloud adapter
@@ -15,11 +15,11 @@ import { localBackend } from '@/services/localBackend';
  * to the offline store keeps the app openable and reports the reason.
  */
 function pick(): Backend {
-  if (isSupabaseConfigured) {
+  if (isParseConfigured) {
     try {
-      return require('@/services/supabaseBackend').supabaseBackend;
+      return require('@/services/parseBackend').parseBackend;
     } catch (e) {
-      console.error('[backend] Supabase adapter failed to load', e);
+      console.error('[backend] Parse adapter failed to load', e);
     }
   }
   if (isFirebaseConfigured) {
@@ -37,4 +37,4 @@ export const backendKind = backend.kind;
 
 /** True when a cloud backend was configured but could not be loaded. */
 export const backendDegraded =
-  (isSupabaseConfigured || isFirebaseConfigured) && backend.kind === 'local';
+  (isParseConfigured || isFirebaseConfigured) && backend.kind === 'local';

@@ -61,7 +61,7 @@ The offline backend seeds two staff accounts so you can try the panels immediate
 ## Tech Stack
 
 - Expo (React Native) + TypeScript + **Expo Router** (file-based navigation)
-- **Supabase** (Postgres + Auth + Realtime + Storage) when configured
+- **Back4App / Parse Server** (database + auth + LiveQuery + file storage) when configured
 - **Offline local backend** (AsyncStorage) as a fallback so the app is fully usable and testable without any cloud setup
 - `react-native-reanimated` for animations, `expo-linear-gradient` for the 3D gradients
 
@@ -76,40 +76,40 @@ Open in **Expo Go** (scan the QR) or an Android/iOS emulator.
 
 By default the app runs in **offline demo mode** using a local AsyncStorage backend — you can register, join contests, recharge (auto-approved in demo) and browse everything immediately. Local demo deposits are auto-approved for convenience.
 
-## Going live with Supabase
+## Going live with Back4App
 
-The app ships pointed at a Supabase project. Two setup steps are needed
-before it works:
+The app runs fully offline until you connect a backend. Connecting takes
+about three minutes and needs no credit card.
 
-1. **Create the database.** Open your project → **SQL Editor** → New query,
-   paste all of `supabase/schema.sql`, and Run. This creates every table,
-   the security policies, the storage bucket and the nine game modes.
-2. **Enable email sign-in.** Authentication → Providers → Email. For testing,
-   turn *off* "Confirm email" so accounts work immediately.
+1. **Create the app.** Go to [back4app.com](https://www.back4app.com), sign
+   up, then **Build new app → Backend as a Service**, name it `Arena Play`,
+   and create it.
+2. **Copy your keys.** Left sidebar → **App Settings → Security & Keys**.
+   Copy the **Application ID** and the **JavaScript Key** into
+   `lib/parseConfig.ts`. Both are client keys and are meant to ship inside
+   the app. **Never** put the Master Key there — it bypasses every
+   permission check.
+3. **Deploy the server rules.** Left sidebar → **Cloud Code → Functions &
+   Web Hosting**. Open `main.js`, paste in all of `cloud/main.js` from this
+   repo, and click **Deploy**.
+
+That is the whole setup — there are no tables to create and no email
+confirmation to turn off. Classes are created on first write, and the game
+catalog seeds itself the first time the app connects.
 
 Then set your own values in `constants/app.ts` — the UPI ID deposits are
 paid to, your support contacts, and the APK download link.
 
-### Optional: Google sign-in
-
-The Google button only appears once the provider is enabled — until then the
-app shows email sign-in alone, so nothing looks broken.
-
-1. In **Google Cloud Console** → APIs & Services → Credentials, create an
-   **OAuth client ID** of type *Web application*.
-2. Add this to **Authorized redirect URIs**, using your own project ref:
-   `https://<your-ref>.supabase.co/auth/v1/callback`
-3. In Supabase → **Authentication → Providers → Google**, paste the client ID
-   and client secret, and enable it.
-4. In Supabase → **Authentication → URL Configuration**, add `arenaplay://` to
-   **Redirect URLs** so the app can catch the sign-in coming back.
-
 ### Making yourself admin
 
-Sign up in the app first, then in the SQL Editor run:
+**The first account you create becomes the admin automatically.** Sign up in
+the app before sharing it with anyone else.
 
-```sql
-update public.users set role = 'admin' where email = 'you@example.com';
+To promote someone later, use the admin panel's user list, or run this once
+from Back4App → **API Console → Cloud Code**:
+
+```js
+Parse.Cloud.run('setUserRole', { userId: '<their id>', role: 'admin' });
 ```
 
 Use `'staff'` for people who only run matches.
@@ -118,13 +118,10 @@ Use `'staff'` for people who only run matches.
 
 Wallet balances are never writable from the app. Joining a contest,
 approving a deposit, requesting a withdrawal and declaring results each run
-as a database function that does its own permission check, and row-level
-security blocks direct writes. Slots use a uniqueness constraint plus a row
-lock, so two players cannot claim the same slot or overdraw one balance.
-
-The publishable key in `lib/supabaseConfig.ts` is meant to ship in the app —
-it only grants what those policies allow. Never put the **secret** /
-service-role key in the app; that one bypasses security entirely.
+as a Cloud Code function that does its own permission check, and
+`beforeSave` / `beforeDelete` hooks reject any write that did not come from
+the server. Slot claims and balance changes are re-checked server-side, so
+two players cannot take the same slot or overdraw one balance.
 
 ## Project structure
 
