@@ -9,8 +9,8 @@
  * Never put the Master Key here — that one bypasses every permission check.
  */
 export const parseConfig = {
-  appId: 'YOUR_APPLICATION_ID',
-  javascriptKey: 'YOUR_JAVASCRIPT_KEY',
+  appId: 'bdZdjfvg21Km30XVv8WIDP7sXAUxePVgmnreKvdr',
+  javascriptKey: 'KsJzfCqEcsjnK9EdhlKEUzn2d8bjfMuhGfMhvPOQ',
   serverURL: 'https://parseapi.back4app.com/',
   liveQueryURL: 'wss://arena-play.back4app.io',
 };

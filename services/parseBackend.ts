@@ -131,6 +131,9 @@ const toNotif = (o: PO): AppNotification => ({
  * dashboard; where it is not, the initial fetch still works and the screen
  * simply is not live, so a missing subscription degrades rather than breaks.
  */
+/** How often to refetch when LiveQuery is unavailable. */
+const POLL_MS = 15000;
+
 function live<T>(
   build: () => Parse.Query,
   map: (o: PO) => T,
@@ -138,6 +141,7 @@ function live<T>(
 ): Unsub {
   let closed = false;
   let sub: Parse.LiveQuerySubscription | undefined;
+  let poll: ReturnType<typeof setInterval> | undefined;
 
   const run = () => {
     build()
@@ -158,10 +162,16 @@ function live<T>(
       s.on('enter', run);
       s.on('leave', run);
     })
-    .catch((e) => console.warn('[parse] live query unavailable', e?.message));
+    .catch((e) => {
+      // LiveQuery is off by default on a fresh Back4App app. Rather than
+      // showing data that silently goes stale, fall back to refetching.
+      console.warn('[parse] live query unavailable, polling instead', e?.message);
+      if (!closed) poll = setInterval(run, POLL_MS);
+    });
 
   return () => {
     closed = true;
+    if (poll) clearInterval(poll);
     sub?.unsubscribe();
   };
 }
