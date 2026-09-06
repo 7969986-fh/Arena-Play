@@ -216,16 +216,20 @@ class SupabaseBackend implements Backend {
     if (error) throw new Error(error.message);
     if (data.session) return;
 
-    // No session means the project still requires a confirmed email. Try
-    // signing in anyway: once confirmation is switched off server-side this
-    // succeeds immediately and the player never sees a interruption.
+    // Supabase will not reveal that an address is taken, so it answers a
+    // duplicate sign-up with a decoy user carrying no identities and no
+    // session. Telling the player to sign in is the only useful response.
+    if (data.user && (data.user.identities?.length ?? 0) === 0) {
+      throw new Error('That email already has an account. Tap Sign in instead.');
+    }
+
+    // Otherwise the project still wants a confirmed email. Attempt sign-in
+    // anyway: where confirmation is off this succeeds and the player goes
+    // straight in.
     const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
     if (!signInErr) return;
 
-    throw new Error(
-      'Account created, but sign-in is blocked until email confirmation is ' +
-        'turned off for this project.',
-    );
+    throw new Error('Account created. Please tap Sign in to continue.');
   }
 
   async signIn(email: string, password: string) {
