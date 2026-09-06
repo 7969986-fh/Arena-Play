@@ -10,7 +10,7 @@
  */
 export const parseConfig = {
   appId: 'bdZdjfvg21Km30XVv8WIDP7sXAUxePVgmnreKvdr',
-  javascriptKey: 'KXcxBAgqRpCtTENWQHZzY9olo44RffKOzruJXyNX',
+  javascriptKey: 'yBKbMsKUvTx8koCrRhyo9hSyR82vxxUkuvZuhuQe',
   serverURL: 'https://parseapi.back4app.com/',
   liveQueryURL: 'wss://arena-play.back4app.io',
 };
