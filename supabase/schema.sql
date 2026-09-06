@@ -487,6 +487,38 @@ begin
   return jsonb_build_object('reward', reward, 'streak', next_streak);
 end $$;
 
+-- ------------------------------------------------------------ auto-confirm
+-- Marks every new account as email-confirmed the moment it is created.
+--
+-- Supabase's "Confirm email" setting lives in the dashboard rather than in
+-- SQL, and while it is on a new player cannot get in until they find and
+-- click a link in their inbox. Stamping email_confirmed_at here removes that
+-- step entirely: sign-up still returns no session, so the app signs the
+-- player in immediately afterwards, which now succeeds.
+--
+-- The trade-off is deliberate: addresses are never verified, so a player who
+-- mistypes theirs cannot recover the account by email.
+--
+-- confirmed_at is a generated column and must not be written to; only
+-- email_confirmed_at is set.
+
+create or replace function public.auto_confirm_email()
+returns trigger language plpgsql security definer set search_path = auth, public as $$
+begin
+  new.email_confirmed_at := coalesce(new.email_confirmed_at, now());
+  return new;
+end $$;
+
+drop trigger if exists auto_confirm_email on auth.users;
+create trigger auto_confirm_email
+  before insert on auth.users
+  for each row execute function public.auto_confirm_email();
+
+-- Confirms any account created before this trigger existed.
+update auth.users
+   set email_confirmed_at = now()
+ where email_confirmed_at is null;
+
 -- ---------------------------------------------------------------- signup
 -- Creates the app-side profile whenever an auth user is created, so the
 -- client never has to write the wallet or role itself.
