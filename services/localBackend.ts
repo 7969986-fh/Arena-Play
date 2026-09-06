@@ -142,14 +142,6 @@ class LocalBackend implements Backend {
     await this.persist('session');
   }
 
-  async isGoogleAvailable() {
-    return false;
-  }
-
-  async signInWithGoogle(): Promise<void> {
-    throw new Error('Google sign-in needs Supabase. Use email and password.');
-  }
-
   async signOut() {
     await this.ready;
     this.cache['session'] = { uid: null };

@@ -214,98 +214,23 @@ class SupabaseBackend implements Backend {
       options: { data: { username, referredBy: referredBy ?? '' } },
     });
     if (error) throw new Error(error.message);
+    if (data.session) return;
 
-    // Supabase returns a user but no session when "Confirm email" is on.
-    // Without this the screen would just stop, looking like nothing happened.
-    if (!data.session) {
-      throw new Error(
-        'Account created. Check your email and confirm the link before signing in.',
-      );
-    }
+    // No session means the project still requires a confirmed email. Try
+    // signing in anyway: once confirmation is switched off server-side this
+    // succeeds immediately and the player never sees a interruption.
+    const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
+    if (!signInErr) return;
+
+    throw new Error(
+      'Account created, but sign-in is blocked until email confirmation is ' +
+        'turned off for this project.',
+    );
   }
 
   async signIn(email: string, password: string) {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw new Error(error.message);
-  }
-
-  /** Cached so every screen mount does not re-request the same settings. */
-  private authSettings?: Promise<Record<string, any>>;
-
-  /**
-   * Asks the project which sign-in providers are switched on.
-   *
-   * Supabase reports an unconfigured provider only when the user has already
-   * tapped the button and the request has failed, which is far too late.
-   * Reading it up front lets the UI offer only what actually works.
-   */
-  private settings() {
-    if (!this.authSettings) {
-      this.authSettings = fetch(`${supabaseConfig.url}/auth/v1/settings`, {
-        headers: { apikey: supabaseConfig.publishableKey },
-      })
-        .then((r) => r.json())
-        .catch((e) => {
-          console.warn('[supabase] could not read auth settings', e?.message);
-          return {};
-        });
-    }
-    return this.authSettings;
-  }
-
-  async isGoogleAvailable() {
-    return !!(await this.settings())?.external?.google;
-  }
-
-  /** True when new sign-ups must click an emailed link before they can play. */
-  async requiresEmailConfirmation() {
-    const s = await this.settings();
-    // mailer_autoconfirm true means Supabase confirms the address itself.
-    return s?.mailer_autoconfirm === false;
-  }
-
-  /**
-   * Opens Google in a system browser tab and exchanges the code it returns
-   * for a session. `skipBrowserRedirect` keeps the SDK from navigating on
-   * its own — on a device there is no page to navigate, so the app drives
-   * the tab and catches the deep link back itself.
-   */
-  async signInWithGoogle() {
-    // Required lazily: these pull in native modules that are only needed
-    // once someone actually taps Google, and a problem loading them must
-    // not take down app startup.
-    const WebBrowser = require('expo-web-browser');
-    const { makeRedirectUri } = require('expo-auth-session');
-
-    const redirectTo = makeRedirectUri({ scheme: 'arenaplay', path: 'auth-callback' });
-
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo, skipBrowserRedirect: true },
-    });
-    if (error) {
-      // The provider being switched off is by far the most common cause,
-      // and Supabase reports it in a form that means nothing to a player.
-      if (/provider.*not enabled|Unsupported provider/i.test(error.message)) {
-        throw new Error(
-          'Google sign-in is not switched on for this app yet. Use email and password for now.',
-        );
-      }
-      throw new Error(error.message);
-    }
-    if (!data?.url) throw new Error('Could not start Google sign-in.');
-
-    const res = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
-    if (res.type !== 'success') {
-      // The player closed the tab or hit cancel; not an error worth showing.
-      throw new Error('CANCELLED');
-    }
-
-    const code = new URL(res.url).searchParams.get('code');
-    if (!code) throw new Error('Google did not return a sign-in code.');
-
-    const { error: exErr } = await supabase.auth.exchangeCodeForSession(code);
-    if (exErr) throw new Error(exErr.message);
   }
 
   async signOut() {

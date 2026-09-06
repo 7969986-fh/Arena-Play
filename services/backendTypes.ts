@@ -65,14 +65,6 @@ export interface Backend {
   signUp(username: string, email: string, password: string, referredBy?: string): Promise<void>;
   signIn(email: string, password: string): Promise<void>;
   signOut(): Promise<void>;
-  /**
-   * Whether Google sign-in can actually complete right now. Checked at
-   * runtime rather than assumed, so the button is never shown when tapping
-   * it could only fail — and appears on its own once the provider is
-   * switched on, with no app update.
-   */
-  isGoogleAvailable(): Promise<boolean>;
-  signInWithGoogle(): Promise<void>;
 
   // User
   watchUser(uid: string, cb: (u: AppUser | null) => void): Unsub;

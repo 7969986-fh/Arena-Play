@@ -6,7 +6,6 @@ import { Link } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import Brand from '@/components/Brand';
 import Button from '@/components/ui/Button';
-import GoogleButton from '@/components/GoogleButton';
 import Card from '@/components/ui/Card';
 import Input from '@/components/ui/Input';
 import { useAuth } from '@/hooks/useAuth';
@@ -57,8 +56,6 @@ export default function Register() {
             {error ? <Text style={styles.error}>{error}</Text> : null}
 
             <Button label="Create Account" onPress={onSubmit} loading={loading} style={{ marginTop: 8 }} />
-
-            <GoogleButton label="Sign up with Google" />
 
             <View style={styles.footer}>
               <Text style={styles.muted}>Already have an account? </Text>
